@@ -1,4 +1,4 @@
-## Ticketing Project T2
+## Game Web Renewal Project Backend
 ***
   <p align="center"></p>
     <p align="center">
@@ -16,8 +16,10 @@
 
 ## Description
 
-Ticketing Service Project T2 repository.
-Dev for study
+Game Web Backend Repository.
+
+Seed Project -> https://github.com/LightSirius/T2-backend
+
 
 this service need elk -> https://github.com/sherifabdlnaby/elastdocker
 
