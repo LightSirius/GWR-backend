@@ -21,6 +21,9 @@ export class Comment {
   })
   comment_sort_idx: number;
 
+  @Column({ default: 0 })
+  comment_status: number;
+
   @Column()
   board_id: number;
 
