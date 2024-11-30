@@ -7,11 +7,12 @@ import {
 } from 'typeorm';
 
 export enum BoardType {
-  'notice',
-  'update',
-  'event',
   'free',
+  'market',
+  'ucc',
+  'guild',
 }
+
 @Entity()
 export class Board {
   constructor(board: Partial<Board>) {
@@ -30,6 +31,9 @@ export class Board {
   @Column({ type: 'enum', enum: BoardType, default: BoardType.free })
   board_type: BoardType;
 
+  @Column({ default: 0 })
+  board_category: number;
+
   @Column()
   board_title: string;
 
@@ -44,6 +48,12 @@ export class Board {
 
   @Column({ default: 0 })
   recommend_count: number;
+
+  @Column({ default: false })
+  info_delete: boolean;
+
+  @Column({ default: false })
+  info_block: boolean;
 
   @CreateDateColumn()
   create_date: Date;

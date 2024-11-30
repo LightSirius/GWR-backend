@@ -6,6 +6,9 @@ import { Board } from './entities/board.entity';
 import { RedisModule } from '../redis/redis.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 import { ConfigService } from '@nestjs/config';
+import { RecommendModule } from '../recommend/recommend.module';
+import { UserModule } from '../user/user.module';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -25,6 +28,9 @@ import { ConfigService } from '@nestjs/config';
       }),
       inject: [ConfigService],
     }),
+    RecommendModule,
+    UserModule,
+    HttpModule,
   ],
   controllers: [BoardController],
   providers: [BoardService],
