@@ -6,13 +6,16 @@ import {
   HttpStatus,
   Param,
   Post,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CreatePaymentPortoneDto } from './dto/create-payment-portone.dto';
 import { CreatePaymentPaypalDto } from './dto/create-payment-paypal.dto';
 import { validate } from 'class-validator';
 import { PaymentType } from './entities/payment-list.entity';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 
 @ApiTags('Payment API')
 @Controller('payment')
@@ -53,5 +56,12 @@ export class PaymentController {
   @Get('user/:id')
   async getPaymentLists(@Param('id') id: string) {
     return this.paymentService.getPaymentLists(id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('billing')
+  getBillingModule(@Request() guard) {
+    return this.paymentService.getBillingModule(guard.user);
   }
 }
