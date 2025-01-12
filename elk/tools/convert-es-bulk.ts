@@ -58,6 +58,10 @@ async function processData(data) {
     board_contents: data.board_contents,
     board_type: data.board_type,
     user_name: data.user_name,
+    create_date: new Date(data.create_date),
+    comment_count: data.comment_count,
+    view_count: data.view_count,
+    recommend_count: data.recommend_count,
   });
 }
 

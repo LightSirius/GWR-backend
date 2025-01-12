@@ -19,40 +19,28 @@ import { BoardSearchDto } from './dto/board-search.dto';
 import { BoardEsNewestDto } from './dto/board-es-newest.dto';
 import { BoardEsScoreDto } from './dto/board-es-score.dto';
 import { BoardEsSearchDto } from './dto/board-es-search.dto';
+import { BoardBlockDto } from './dto/board-block.dto';
 
 @ApiTags('Board API')
 @Controller('board')
 export class BoardController {
   constructor(private readonly boardService: BoardService) {}
 
-  @Post('create')
-  create(@Body() createBoardDto: CreateBoardDto) {
-    return this.boardService.create(createBoardDto);
+  @Get('main-list')
+  async board_main_list() {
+    return await this.boardService.boardMainList();
   }
 
-  @Get()
-  findAll() {
-    return this.boardService.findAll();
+  @Post('search')
+  async board_search(@Body() boardListDto: BoardSearchDto) {
+    return await this.boardService.boardSearch(boardListDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.boardService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBoardDto: UpdateBoardDto) {
-    return this.boardService.update(+id, updateBoardDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.boardService.remove(+id);
-  }
-
-  @Get('list/:type/:page')
-  board_list(@Param('type') type: number, @Param('page') page: number) {
-    return this.boardService.board_list(+type, +page);
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('insert')
+  async board_insert(@Body() boardInsertDto: BoardInsertDto, @Request() req) {
+    return await this.boardService.boardInsert(boardInsertDto, req.user);
   }
 
   @Get('detail/:board_id')
@@ -60,11 +48,9 @@ export class BoardController {
     return this.boardService.board_detail(board_id);
   }
 
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Post('insert')
-  async board_insert(@Body() boardInsertDto: BoardInsertDto, @Request() guard) {
-    return await this.boardService.board_insert(boardInsertDto, guard.user);
+  @Post('block')
+  async board_block(@Body() boardBlockDto: BoardBlockDto) {
+    return await this.boardService.boardBlock(boardBlockDto);
   }
 
   @ApiBearerAuth()
@@ -87,11 +73,6 @@ export class BoardController {
   @Post('check-owner/:board_id')
   board_check_owner(@Param('board_id') board_id: string, @Request() guard) {
     return this.boardService.board_check_owner(+board_id, guard.user);
-  }
-
-  @Post('search')
-  board_search_list(@Body() boardSearchDto: BoardSearchDto) {
-    return this.boardService.board_search_list(boardSearchDto);
   }
 
   @Post('search-es')

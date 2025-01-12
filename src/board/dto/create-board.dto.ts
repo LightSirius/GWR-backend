@@ -1,6 +1,6 @@
 import { BoardType } from '../entities/board.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsString } from 'class-validator';
 
 export class CreateBoardDto {
   @ApiProperty({ description: 'user_uuid' })
@@ -12,6 +12,9 @@ export class CreateBoardDto {
   @ApiProperty({ description: 'board_type' })
   @IsEnum(BoardType)
   board_type: BoardType;
+  @ApiProperty({ description: 'board_category' })
+  @IsNumber()
+  board_category: number;
   @ApiProperty({ description: 'board_title' })
   @IsString()
   board_title: string;

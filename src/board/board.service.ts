@@ -5,43 +5,65 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { CreateBoardDto } from './dto/create-board.dto';
-import { UpdateBoardDto } from './dto/update-board.dto';
 import { EntityManager, Repository } from 'typeorm';
-import { Board } from './entities/board.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RedisClientType } from 'redis';
-import { User } from '../user/entities/user.entity';
-import { BoardListDto } from './dto/board-list.dto';
-import { BoardDetailDto } from './dto/board-detail.dto';
-import { BoardInsertDto } from './dto/board-insert.dto';
-import { BoardModifyDto } from './dto/board-modify.dto';
 import { isEmpty } from '../utils/utill';
-import { BoardSearchDto } from './dto/board-search.dto';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
-import {
-  BoardEsNewestPayload,
-  BoardEsScorePayload,
-  BoardEsSearchPayload,
-  BoardListPayload,
-} from './payload/board-es.payload';
-import { BoardEsNewestDto } from './dto/board-es-newest.dto';
-import { BoardEsScoreDto } from './dto/board-es-score.dto';
-import { BoardEsSearchDto } from './dto/board-es-search.dto';
 import {
   GetGetResult,
   SearchResponse,
 } from '@elastic/elasticsearch/lib/api/types';
+import { RecommendService } from '../recommend/recommend.service';
+import { Board, BoardType } from './entities/board.entity';
+import { CreateBoardDto } from './dto/create-board.dto';
+import { UpdateBoardDto } from './dto/update-board.dto';
+import { BoardDetailDto } from './dto/board-detail.dto';
+import { BoardInsertDto } from './dto/board-insert.dto';
+import { BoardModifyDto } from './dto/board-modify.dto';
+import { BoardSearchDto, SearchType, SortType } from './dto/board-search.dto';
+import { BoardEsNewestDto } from './dto/board-es-newest.dto';
+import { BoardEsScoreDto } from './dto/board-es-score.dto';
+import { BoardEsSearchDto } from './dto/board-es-search.dto';
+import {
+  BoardEsNewestPayload,
+  BoardEsScorePayload,
+  BoardEsSearchPayload,
+} from './payload/board-es.payload';
+import { AuthTokenPayloadDto } from '../auth/dto/auth-token-payload.dto';
+import {
+  BoardInsertResponseDto,
+  StatusType,
+} from './dto/board-insert.response.dto';
+import { UserService } from '../user/user.service';
+import { BoardListPayload } from './payload/board-list.payload';
+import { HttpService } from '@nestjs/axios';
+import {
+  BoardSearchHitSource,
+  BoardSearchResponseDto,
+} from './dto/board-search.response.dto';
+import { BoardBlockDto } from './dto/board-block.dto';
+import { BoardBlockResponseDto, Status } from './dto/board-block.response.dto';
+
+const KoLang = {
+  board: {
+    delete_title: '삭제된 게시글입니다.',
+    block_title: '삭제된 게시글입니다.',
+  },
+};
 
 @Injectable()
 export class BoardService {
   constructor(
     @Inject('REDIS_CLIENT')
     private readonly redis: RedisClientType,
+    private readonly httpService: HttpService,
     @InjectRepository(Board)
     private boardRepository: Repository<Board>,
     private readonly entityManager: EntityManager,
     private readonly elasticsearchService: ElasticsearchService,
+    private readonly recommendService: RecommendService,
+    private readonly userService: UserService,
   ) {}
   create(createBoardDto: CreateBoardDto) {
     const board = new Board(createBoardDto);
@@ -65,33 +87,212 @@ export class BoardService {
     return `This action removes a #${id} board`;
   }
 
-  async board_list(type: number, page: number): Promise<BoardListDto> {
-    const sql_limit = 20;
-    const sql_page = page - 1 > 0 ? page - 1 : 0;
-    const sql_offset = sql_page * sql_limit;
+  boardTypeToIndex(board_type: BoardType) {
+    switch (board_type) {
+      case BoardType.free: {
+        return 'board_free';
+      }
+      case BoardType.market: {
+        return 'board_market';
+      }
+      case BoardType.guild: {
+        return 'board_guild';
+      }
+      case BoardType.ucc: {
+        return 'board_ucc';
+      }
+    }
+  }
+
+  async boardInsert(
+    boardInsertDto: BoardInsertDto,
+    guard: AuthTokenPayloadDto,
+  ): Promise<BoardInsertResponseDto> {
+    const user = await this.userService.findOneWithAuth(guard.uuid);
+    if (!user) {
+      return { status: StatusType.error, board_id: 0 };
+    }
+    if (!user.member_cuid) {
+      return { status: StatusType.notsetcuid, board_id: 0 };
+    }
+
+    const game_info = await this.userService.user_game_info_detail(
+      user.member_uuid.toString(),
+      user.member_cuid.toString(),
+    );
+
+    const board = await this.create({
+      user_uuid: guard.uuid,
+      user_name: game_info.NickName,
+      ...boardInsertDto,
+    });
+    if (!board) {
+      return { status: StatusType.error, board_id: 0 };
+    }
+
+    const es_result = await this.elasticsearchService.create({
+      index: this.boardTypeToIndex(board.board_type),
+      id: board.board_id.toString(),
+      document: {
+        board_id: board.board_id,
+        board_title: board.board_title,
+        board_contents: boardInsertDto.board_contents_es,
+        board_type: board.board_type,
+        board_category: board.board_category,
+        user_name: board.user_name,
+        info_delete: false,
+        info_block: false,
+        create_date: board.create_date,
+        comment_count: 0,
+        view_count: 0,
+        recommend_count: 0,
+      },
+    });
+    if (!es_result) {
+      Logger.error(`boardInsert elastic generation failed`, `Board`);
+      return { status: StatusType.error, board_id: 0 };
+    }
+
+    return { status: StatusType.success, board_id: board.board_id };
+  }
+
+  async boardSearch(
+    boardSearchDto: BoardSearchDto,
+  ): Promise<BoardSearchResponseDto> {
+    if (
+      boardSearchDto.search_type != null &&
+      boardSearchDto.search_string == null
+    ) {
+      return { total_count: 0, board_summary: [] };
+    }
+    if (
+      boardSearchDto.sort_type == SortType.score &&
+      (boardSearchDto.search_string == null ||
+        boardSearchDto.search_string == '')
+    ) {
+      return { total_count: 0, board_summary: [] };
+    }
+
+    const now = Date.now();
+
+    const search_sql: BoardListPayload = {
+      index: this.boardTypeToIndex(boardSearchDto.board_type),
+      size: boardSearchDto.search_size ? boardSearchDto.search_size : 20,
+      query: {
+        bool: {
+          filter: [
+            {
+              term: {
+                board_category: boardSearchDto.board_category,
+              },
+            },
+          ],
+        },
+      },
+      track_total_hits: true,
+    };
+
+    switch (boardSearchDto.search_type) {
+      case SearchType.contents: {
+        search_sql.query.bool.must = {
+          match: { board_title: boardSearchDto.search_string },
+        };
+        break;
+      }
+      case SearchType.title: {
+        search_sql.query.bool.must = {
+          match: { board_contents: boardSearchDto.search_string },
+        };
+        break;
+      }
+      case SearchType.username: {
+        search_sql.query.bool.must = {
+          match: { user_name: boardSearchDto.search_string },
+        };
+        break;
+      }
+      default: {
+        if (boardSearchDto.sort_type == SortType.score) {
+          search_sql.query.bool.must = {
+            match: { board_contents: boardSearchDto.search_string },
+          };
+        }
+        break;
+      }
+    }
+
+    if (boardSearchDto.sort_type == SortType.newest) {
+      search_sql.sort = [{ board_id: { order: 'desc' } }];
+    }
+    boardSearchDto.search_page--;
+    if (boardSearchDto.search_page != 0 && boardSearchDto.search_page > 0) {
+      search_sql.from = boardSearchDto.search_size
+        ? boardSearchDto.search_size * boardSearchDto.search_page
+        : 20 * boardSearchDto.search_page;
+    }
+
+    const board_data: SearchResponse =
+      await this.elasticsearchService.search(search_sql);
+
+    const boardSearchResponse: BoardSearchResponseDto = {
+      total_count:
+        typeof board_data.hits.total != 'number'
+          ? board_data.hits.total.value
+          : 0,
+      board_summary: [],
+    };
+
+    board_data.hits.hits.forEach((hits: BoardSearchHitSource) => {
+      boardSearchResponse.board_summary.push({
+        board_id: +hits._id,
+        board_title:
+          hits._source.info_delete || hits._source.info_block
+            ? KoLang.board.delete_title
+            : hits._source.board_title,
+        user_name: hits._source.user_name,
+        info_delete: hits._source.info_delete,
+        info_block: hits._source.info_block,
+        create_date: hits._source.create_date,
+        comment_count: hits._source.comment_count,
+        view_count: hits._source.view_count,
+        recommend_count: hits._source.recommend_count,
+      });
+    });
+
+    Logger.log(`boardList latency ${Date.now() - now}ms`, `Board`);
+
+    return boardSearchResponse;
+  }
+
+  async boardMainList() {}
+
+  async boardBlock(
+    boardBlockDto: BoardBlockDto,
+  ): Promise<BoardBlockResponseDto> {
+    const board = await this.findOne(boardBlockDto.board_id);
+    if (!board) {
+      return {
+        status: Status.fail,
+        board_id: boardBlockDto.board_id,
+        board_type: boardBlockDto.board_type,
+      };
+    }
+
+    board.info_block = true;
+    const result = await this.boardRepository.save(board);
+
+    if (!result) {
+      return {
+        status: Status.error,
+        board_id: boardBlockDto.board_id,
+        board_type: boardBlockDto.board_type,
+      };
+    }
 
     return {
-      total_page: Math.ceil(
-        (await this.boardRepository.count({
-          where: {
-            board_type: type,
-          },
-        })) / sql_limit,
-      ),
-      board_list: await this.boardRepository
-        .createQueryBuilder('board')
-        .leftJoinAndSelect(User, 'user', 'board.user_uuid = user.user_uuid')
-        .select([
-          'board.board_id AS board_id',
-          'board.board_title AS board_title',
-          // 'board.board_contents AS board_contents',
-          'user.user_name AS user_name',
-        ])
-        .where('board.board_type = :type', { type: type })
-        .orderBy('board.board_id', 'DESC')
-        .limit(20)
-        .offset(sql_offset)
-        .getRawMany(),
+      status: Status.success,
+      board_id: boardBlockDto.board_id,
+      board_type: boardBlockDto.board_type,
     };
   }
 
@@ -106,20 +307,8 @@ export class BoardService {
       };
     } else {
       board_detail_data = {
-        ...(await this.boardRepository
-          .createQueryBuilder('board')
-          .leftJoinAndSelect(User, 'user', 'board.user_uuid = user.user_uuid')
-          .select([
-            'board.board_id AS board_id',
-            'board.board_type AS board_type',
-            'board.board_title AS board_title',
-            'board.board_contents AS board_contents',
-            'board.user_uuid AS user_uuid',
-            'user.user_name AS user_name',
-            'board.update_date AS update_date',
-          ])
-          .where('board.board_id = :board_id', { board_id: board_id })
-          .getRawOne()),
+        ...(await this.findOne(board_id)),
+        near_board_list: null,
       };
     }
 
@@ -133,13 +322,21 @@ export class BoardService {
       JSON.stringify(board_detail_data),
     );
 
-    await this.elasticsearchService.update({
-      index: 'board_community',
-      id: board_id.toString(),
-      script: {
-        source: 'ctx._source.view_count += 1',
-      },
-    });
+    await this.redis.multi();
+
+    // # Call elasticsearch agent
+    const post = await this.httpService
+      .post('http://host.docker.internal:3100', {
+        index: 'board_free',
+        id: board_id.toString(),
+        script: {
+          source: 'ctx._source.view_count += 1',
+        },
+      })
+      .toPromise();
+    if (!post.data) {
+      Logger.error('board_detail: view count not updated', `Board`);
+    }
 
     const es_get_result: GetGetResult<{
       board_id: number;
@@ -151,13 +348,14 @@ export class BoardService {
       view_count?: number;
       recommend_count?: number;
     }> = await this.elasticsearchService.get({
-      index: 'board_community',
+      index: 'board_free',
       id: board_id.toString(),
     });
 
     board_detail_data.view_count = es_get_result._source.view_count;
     board_detail_data.comment_count = es_get_result._source.comment_count;
     board_detail_data.recommend_count = es_get_result._source.recommend_count;
+
     board_detail_data.near_board_list = {
       ...(await this.entityManager.query(
         'select board_id, board_type, board_title, create_date ' +
@@ -172,36 +370,6 @@ export class BoardService {
     };
 
     return board_detail_data;
-  }
-
-  async board_insert(
-    boardInsertDto: BoardInsertDto,
-    guard: { uuid: string; name: string },
-  ) {
-    const board = await this.create({
-      user_uuid: guard.uuid,
-      user_name: guard.name,
-      ...boardInsertDto,
-    });
-    const es_result = await this.elasticsearchService.create({
-      index: 'board_community',
-      id: board.board_id.toString(),
-      document: {
-        board_id: board.board_id,
-        board_title: board.board_title,
-        board_contents: board.board_contents,
-        board_type: board.board_type,
-        user_name: board.user_name,
-      },
-    });
-    if (!es_result) {
-      throw new HttpException(
-        'Generation failed',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-
-    return board.board_id;
   }
 
   async board_modify(
@@ -245,63 +413,13 @@ export class BoardService {
   async board_check_owner(
     board_id: number,
     guard: { uuid: string },
-  ): Promise<Board> {
+  ): Promise<Board | null> {
     const board = await this.findOne(board_id);
     if (board.user_uuid == guard.uuid) {
       return board;
     } else {
       return null;
     }
-  }
-
-  async board_search_list(
-    boardSearchDto: BoardSearchDto,
-  ): Promise<BoardListDto> {
-    const sql_limit = 20;
-    const sql_page = boardSearchDto.page - 1 > 0 ? boardSearchDto.page - 1 : 0;
-    const sql_offset = sql_page * sql_limit;
-    const now = Date.now();
-
-    const search_list = {
-      total_page: Math.ceil(
-        (await this.boardRepository
-          .createQueryBuilder('board')
-          .select([
-            'board.board_id AS board_id',
-            'board.board_title AS board_title',
-          ])
-          .where('board.board_type = :type', {
-            type: boardSearchDto.board_type,
-          })
-          .andWhere('board.board_title like :search_string')
-          .orWhere('board.board_contents like :search_string')
-          .setParameter(
-            'search_string',
-            '%' + boardSearchDto.search_string + '%',
-          )
-          .getCount()) / sql_limit,
-      ),
-      board_list: await this.boardRepository
-        .createQueryBuilder('board')
-        .leftJoinAndSelect(User, 'user', 'board.user_uuid = user.user_uuid')
-        .select([
-          'board.board_id AS board_id',
-          'board.board_title AS board_title',
-          'user.user_name AS user_name',
-        ])
-        .where('board.board_type = :type', { type: boardSearchDto.board_type })
-        .andWhere('board.board_title like :search_string')
-        .orWhere('board.board_contents like :search_string')
-        .setParameter('search_string', '%' + boardSearchDto.search_string + '%')
-        .orderBy('board.board_id', 'DESC')
-        .limit(sql_limit)
-        .offset(sql_offset)
-        .getRawMany(),
-    };
-
-    Logger.log(`board_search_list latency ${Date.now() - now}ms`, `Board`);
-
-    return search_list;
   }
 
   async board_search_list_es(boardEsSearchDto: BoardEsSearchDto) {
@@ -315,7 +433,7 @@ export class BoardService {
     const now = Date.now();
 
     const search_sql: BoardEsSearchPayload = {
-      index: 'board_community',
+      index: 'board_free',
       size: 20,
       query: {
         bool: {
@@ -379,7 +497,7 @@ export class BoardService {
     const now = Date.now();
 
     const search_sql: BoardEsNewestPayload = {
-      index: 'board_community',
+      index: 'board_free',
       size: 20,
       sort: [
         {
@@ -450,7 +568,7 @@ export class BoardService {
     const now = Date.now();
 
     const search_sql: BoardEsScorePayload = {
-      index: 'board_community',
+      index: 'board_free',
       size: 20,
       query: {
         bool: {
@@ -503,5 +621,9 @@ export class BoardService {
     );
 
     return board_data;
+  }
+
+  async insert_migration() {
+    return false;
   }
 }
