@@ -1,35 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsDate,
-  IsEmail,
-  IsEnum,
-  IsString,
-  Matches,
-} from 'class-validator';
+import { IsBoolean, IsDate, IsEmail, IsString, Matches } from 'class-validator';
 import { Type } from 'class-transformer';
-import { AuthType } from '../entities/user-auth.entity';
 
-export class UserRegistrationDto {
-  @ApiProperty({ description: 'user_name' })
+export class UserRegisterLocalDto {
+  @ApiProperty({ description: 'token_version_id' })
   @IsString()
-  user_name: string;
-  @ApiProperty({ description: 'user_gender' })
-  @IsBoolean()
-  user_gender: boolean;
-  @ApiProperty({ description: 'user_born' })
-  @IsDate()
-  @Type(() => Date)
-  user_born: Date;
+  token_version_id: string;
+  @ApiProperty({ description: 'enc_data' })
+  @IsString()
+  enc_data: string;
   @ApiProperty({ description: 'user_email' })
   @IsEmail()
   user_email: string;
-  @ApiProperty({ description: 'user_passid' })
-  @IsString()
-  user_ci: string;
-  @ApiProperty({ description: 'phone_number' })
-  @IsString()
-  phone_number: string;
   @ApiProperty({ description: 'phone_sns_agree' })
   @IsBoolean()
   phone_sns_agree: boolean;
@@ -37,9 +19,6 @@ export class UserRegistrationDto {
   @IsDate()
   @Type(() => Date)
   phone_sns_agree_date: Date;
-  @ApiProperty({ description: 'AuthType' })
-  @IsEnum(AuthType)
-  auth_type: AuthType;
   @ApiProperty({ description: 'auth_id' })
   @IsString()
   auth_id: string;

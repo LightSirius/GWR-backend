@@ -6,6 +6,12 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum AuthType {
+  'Local',
+  'SnsNaver',
+  'ChannelNaver',
+}
+
 @Entity()
 export class UserAuth {
   constructor(userAuth: Partial<UserAuth>) {
@@ -15,11 +21,8 @@ export class UserAuth {
   @PrimaryGeneratedColumn('uuid')
   uuid: string;
 
-  @Column()
-  auth_id: string;
-
-  @Column()
-  auth_password: string;
+  @Column({ type: 'enum', enum: AuthType })
+  auth_type: AuthType;
 
   @CreateDateColumn()
   create_date: Date;
