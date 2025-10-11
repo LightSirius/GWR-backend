@@ -45,5 +45,5 @@ COPY wait-for-it.sh ./
 RUN chmod +x wait-for-it.sh
 
 # Docker Demon Port Mapping
-EXPOSE 3000
+EXPOSE 3001
 

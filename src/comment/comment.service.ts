@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Logger, HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,12 +9,14 @@ import { CommentInsertDto } from './dto/comment-insert.dto';
 import { GetGetResult } from '@elastic/elasticsearch/lib/api/types';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
 import { CommentDeleteDto } from './dto/comment-delete.dto';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class CommentService {
   constructor(
     @InjectRepository(Comment)
     private commentRepository: Repository<Comment>,
+    private readonly httpService: HttpService,
     private readonly entityManager: EntityManager,
     private readonly elasticsearchService: ElasticsearchService,
   ) {}
@@ -70,25 +72,43 @@ export class CommentService {
         view_count?: number;
         recommend_count?: number;
       }> = await this.elasticsearchService.get({
-        index: 'board_community',
+        index: 'board_free',
         id: commentInsertDto.board_id.toString(),
       });
 
-      const es_result = await this.elasticsearchService.update({
-        if_primary_term: 1,
-        if_seq_no: es_get_result._seq_no,
-        index: 'board_community',
-        id: commentInsertDto.board_id.toString(),
-        doc: {
-          comment_count: await this.comment_list_count(
-            commentInsertDto.board_id,
-          ),
-        },
-      });
-
-      if (es_result) {
-        return comment_result;
+      // # Call elasticsearch agent
+        const post = await this.httpService
+        .post('http://host.docker.internal:3100', {
+          index: 'board_free',
+          id: commentInsertDto.board_id.toString(),
+          script: {
+            source: 'ctx._source.comment_count =' + await this.comment_list_count(
+              commentInsertDto.board_id,
+            ),
+          },
+        })
+        .toPromise();
+      if (!post.data) {
+        Logger.error('board_detail: view count not updated', `Board`);
       }
+
+      return comment_result;
+
+      // const es_result = await this.elasticsearchService.update({
+      //   if_primary_term: 1,
+      //   if_seq_no: es_get_result._seq_no,
+      //   index: 'board_free',
+      //   id: commentInsertDto.board_id.toString(),
+      //   doc: {
+      //     comment_count: await this.comment_list_count(
+      //       commentInsertDto.board_id,
+      //     ),
+      //   },
+      // });
+
+      // if (es_result) {
+      //   return comment_result;
+      // }
     }
   }
 
@@ -147,7 +167,7 @@ export class CommentService {
   }
 
   async comment_list(board_id: number, page: number) {
-    const sql_limit = 20;
+    const sql_limit = 10;
     const sql_page = page - 1 > 0 ? page - 1 : 0;
     const sql_offset = sql_page * sql_limit;
 

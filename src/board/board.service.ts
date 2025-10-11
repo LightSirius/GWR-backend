@@ -92,14 +92,11 @@ export class BoardService {
       case BoardType.free: {
         return 'board_free';
       }
-      case BoardType.market: {
-        return 'board_market';
-      }
-      case BoardType.guild: {
-        return 'board_guild';
-      }
       case BoardType.ucc: {
         return 'board_ucc';
+      }
+      case BoardType.tips: {
+        return 'board_tips';
       }
     }
   }
@@ -110,16 +107,20 @@ export class BoardService {
   ): Promise<BoardInsertResponseDto> {
     const user = await this.userService.findOneWithAuth(guard.uuid);
     if (!user) {
-      return { status: StatusType.error, board_id: 0 };
+      return { status: StatusType.error, board_id: 0, board_type: boardInsertDto.board_type };
     }
-    if (!user.member_cuid) {
-      return { status: StatusType.notsetcuid, board_id: 0 };
-    }
+    // if (!user.member_cuid) {
+    //   return { status: StatusType.notsetcuid, board_id: 0 };
+    // }
 
-    const game_info = await this.userService.user_game_info_detail(
-      user.member_uuid.toString(),
-      user.member_cuid.toString(),
-    );
+    // const game_info = await this.userService.user_game_info_detail(
+    //   user.member_uuid.toString(),
+    //   user.member_cuid.toString(),
+    // );
+
+    const game_info = {
+      NickName: user.user_name.toString(),
+    };
 
     const board = await this.create({
       user_uuid: guard.uuid,
@@ -127,7 +128,7 @@ export class BoardService {
       ...boardInsertDto,
     });
     if (!board) {
-      return { status: StatusType.error, board_id: 0 };
+      return { status: StatusType.error, board_id: 0, board_type: boardInsertDto.board_type };
     }
 
     const es_result = await this.elasticsearchService.create({
@@ -150,10 +151,10 @@ export class BoardService {
     });
     if (!es_result) {
       Logger.error(`boardInsert elastic generation failed`, `Board`);
-      return { status: StatusType.error, board_id: 0 };
-    }
+        return { status: StatusType.error, board_id: 0, board_type: boardInsertDto.board_type };
+      }
 
-    return { status: StatusType.success, board_id: board.board_id };
+    return { status: StatusType.success, board_id: board.board_id, board_type: boardInsertDto.board_type };
   }
 
   async boardSearch(
