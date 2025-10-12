@@ -8,9 +8,8 @@ import {
 
 export enum BoardType {
   'free',
-  'market',
   'ucc',
-  'guild',
+  'tips',
 }
 
 @Entity()

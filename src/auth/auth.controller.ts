@@ -5,7 +5,8 @@ import {
   UseGuards,
   Get,
   Body,
-  Redirect,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { LocalAuthGuard } from './guard/local-auth.guard';
@@ -44,8 +45,8 @@ export class AuthController {
     return this.authService.loginSnsNaver(authLoginSnsNaverDto);
   }
 
-  @Redirect('')
   @Get('login/sns/naver/url')
+  @HttpCode(HttpStatus.OK)
   async loginSnsNaverUrl() {
     return {
       url: await this.authService.getSnsNaverUrl(),
@@ -59,8 +60,8 @@ export class AuthController {
     return this.authService.loginChannelNaver(authLoginChannelNaverDto);
   }
 
-  @Redirect('')
   @Get('login/channel/naver/url')
+  @HttpCode(HttpStatus.OK)
   async loginChannelNaverUrl() {
     return {
       url: await this.authService.getChannelNaverUrl(),

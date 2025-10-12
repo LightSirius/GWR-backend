@@ -85,7 +85,7 @@ export class AttendanceService {
       return { status: Status.error };
     }
 
-    const char = await this.userService.user_game_info_detail(
+    const char = await this.userService.getGameInfoDetail(
       user.member_uuid.toString(),
       user.member_cuid.toString(),
     );
