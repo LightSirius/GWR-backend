@@ -107,7 +107,7 @@ export class AuthService {
    * @returns 네이버 채널링 서비스 URL 문자열
    */
   async getChannelNaverUrl() {
-    return await this.userService.nhn_registration_url();
+    return await this.userService.getNhnRegistrationUrl();
   }
 
   /**
@@ -116,7 +116,7 @@ export class AuthService {
    * @returns 로그인 처리 결과(성공, 실패, 미등록 등) 및 액세스 토큰(성공 시)이 담긴 AuthLoginResponseDto
    */
   async loginChannelNaver(authLoginChannelNaverDto: { GDP_LOGIN: string }) {
-    const res = await this.userService.nhn_get_member(
+    const res = await this.userService.getNhnMember(
       authLoginChannelNaverDto.GDP_LOGIN,
     );
     if (!res.error_code) {
