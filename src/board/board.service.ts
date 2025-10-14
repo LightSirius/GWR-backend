@@ -44,16 +44,23 @@ import {
 } from './dto/board-search.response.dto';
 import { BoardBlockDto } from './dto/board-block.dto';
 import { BoardBlockResponseDto, Status } from './dto/board-block.response.dto';
+import { 
+  BOARD_INDEX, 
+  BOARD_REDIS_KEYS, 
+  BOARD_SEARCH_CONFIG,
+  ELASTICSEARCH_AGENT_URL,
+  BOARD_MESSAGES,
+  BOARD_ERROR_MESSAGES,
+} from './constants/board.constants';
 
-const KoLang = {
-  board: {
-    delete_title: '삭제된 게시글입니다.',
-    block_title: '삭제된 게시글입니다.',
-  },
-};
-
+/**
+ * 게시판 서비스
+ * 게시글 CRUD, 검색, Elasticsearch 연동을 담당합니다.
+ */
 @Injectable()
 export class BoardService {
+  private readonly logger = new Logger(BoardService.name);
+
   constructor(
     @Inject('REDIS_CLIENT')
     private readonly redis: RedisClientType,
@@ -65,43 +72,80 @@ export class BoardService {
     private readonly recommendService: RecommendService,
     private readonly userService: UserService,
   ) {}
+
+  /**
+   * 새 게시글 생성
+   * @param createBoardDto - 게시글 생성 정보
+   * @returns 생성된 게시글 엔티티
+   */
   create(createBoardDto: CreateBoardDto) {
     const board = new Board(createBoardDto);
     return this.entityManager.save(board);
   }
 
+  /**
+   * 모든 게시글 조회
+   * @returns 게시글 목록
+   */
   async findAll() {
     return this.boardRepository.find();
   }
 
-  async findOne(board_id: number) {
-    return this.boardRepository.findOneBy({ board_id });
+  /**
+   * 게시글 ID로 조회
+   * @param boardId - 게시글 ID
+   * @returns 게시글 엔티티
+   */
+  async findOne(boardId: number) {
+    return this.boardRepository.findOneBy({ board_id: boardId });
   }
 
+  /**
+   * 게시글 수정
+   * @param id - 게시글 ID
+   * @param updateBoardDto - 수정할 내용
+   * @returns 수정된 게시글
+   */
   async update(id: number, updateBoardDto: UpdateBoardDto) {
     const board = await this.findOne(id);
     return await this.boardRepository.save({ ...board, ...updateBoardDto });
   }
 
+  /**
+   * 게시글 삭제 (소프트 삭제)
+   * @param id - 게시글 ID
+   * @returns 삭제 메시지
+   */
   remove(id: number) {
     return `This action removes a #${id} board`;
   }
 
-  boardTypeToIndex(board_type: BoardType) {
-    switch (board_type) {
+  /**
+   * 게시판 타입에 해당하는 Elasticsearch 인덱스 이름 반환
+   * @param boardType - 게시판 타입
+   * @returns Elasticsearch 인덱스 이름
+   */
+  boardTypeToIndex(boardType: BoardType) {
+    switch (boardType) {
       case BoardType.free: {
-        return 'board_free';
+        return BOARD_INDEX.FREE;
       }
       case BoardType.ucc: {
-        return 'board_ucc';
+        return BOARD_INDEX.UCC;
       }
       case BoardType.tips: {
-        return 'board_tips';
+        return BOARD_INDEX.TIPS;
       }
     }
   }
 
-  async boardInsert(
+  /**
+   * 새 게시글 등록
+   * @param boardInsertDto - 게시글 내용
+   * @param guard - 인증된 사용자 정보
+   * @returns 게시글 등록 결과
+   */
+  async insertBoard(
     boardInsertDto: BoardInsertDto,
     guard: AuthTokenPayloadDto,
   ): Promise<BoardInsertResponseDto> {
@@ -150,14 +194,19 @@ export class BoardService {
       },
     });
     if (!es_result) {
-      Logger.error(`boardInsert elastic generation failed`, `Board`);
-        return { status: StatusType.error, board_id: 0, board_type: boardInsertDto.board_type };
-      }
+      this.logger.error(`insertBoard: Elasticsearch generation failed`);
+      return { status: StatusType.error, board_id: 0, board_type: boardInsertDto.board_type };
+    }
 
     return { status: StatusType.success, board_id: board.board_id, board_type: boardInsertDto.board_type };
   }
 
-  async boardSearch(
+  /**
+   * 게시글 검색 (Elasticsearch)
+   * @param boardSearchDto - 검색 조건
+   * @returns 검색 결과
+   */
+  async searchBoard(
     boardSearchDto: BoardSearchDto,
   ): Promise<BoardSearchResponseDto> {
     if (
@@ -248,7 +297,7 @@ export class BoardService {
         board_id: +hits._id,
         board_title:
           hits._source.info_delete || hits._source.info_block
-            ? KoLang.board.delete_title
+            ? BOARD_MESSAGES.DELETED_TITLE
             : hits._source.board_title,
         user_name: hits._source.user_name,
         info_delete: hits._source.info_delete,
@@ -260,7 +309,7 @@ export class BoardService {
       });
     });
 
-    Logger.log(`boardList latency ${Date.now() - now}ms`, `Board`);
+    this.logger.log(`Board search completed in ${Date.now() - now}ms`);
 
     return boardSearchResponse;
   }
@@ -297,46 +346,52 @@ export class BoardService {
     };
   }
 
-  async board_detail(board_id: number): Promise<BoardDetailDto> {
-    let board_detail_data = new BoardDetailDto();
+  /**
+   * 게시글 상세 조회 (조회수 증가)
+   * @param boardId - 게시글 ID
+   * @returns 게시글 상세 정보
+   * @throws HttpException - 게시글을 찾을 수 없을 때
+   */
+  async getBoardDetail(boardId: number): Promise<BoardDetailDto> {
+    let boardDetailData = new BoardDetailDto();
 
-    if (await this.redis.hExists('board_detail_list', board_id.toString())) {
-      board_detail_data = {
+    if (await this.redis.hExists(BOARD_REDIS_KEYS.DETAIL_LIST, boardId.toString())) {
+      boardDetailData = {
         ...JSON.parse(
-          await this.redis.hGet('board_detail_list', board_id.toString()),
+          await this.redis.hGet(BOARD_REDIS_KEYS.DETAIL_LIST, boardId.toString()),
         ),
       };
     } else {
-      board_detail_data = {
-        ...(await this.findOne(board_id)),
+      boardDetailData = {
+        ...(await this.findOne(boardId)),
         near_board_list: null,
       };
     }
 
-    if (isEmpty(board_detail_data)) {
-      throw new HttpException('Not Found', HttpStatus.INTERNAL_SERVER_ERROR);
+    if (isEmpty(boardDetailData)) {
+      throw new HttpException(BOARD_ERROR_MESSAGES.NOT_FOUND, HttpStatus.NOT_FOUND);
     }
 
     await this.redis.hSet(
-      'board_detail_list',
-      board_id.toString(),
-      JSON.stringify(board_detail_data),
+      BOARD_REDIS_KEYS.DETAIL_LIST,
+      boardId.toString(),
+      JSON.stringify(boardDetailData),
     );
 
     await this.redis.multi();
 
-    // # Call elasticsearch agent
+    // Elasticsearch agent를 통해 조회수 증가
     const post = await this.httpService
-      .post('http://host.docker.internal:3100', {
-        index: 'board_free',
-        id: board_id.toString(),
+      .post(ELASTICSEARCH_AGENT_URL, {
+        index: BOARD_INDEX.FREE,
+        id: boardId.toString(),
         script: {
           source: 'ctx._source.view_count += 1',
         },
       })
       .toPromise();
     if (!post.data) {
-      Logger.error('board_detail: view count not updated', `Board`);
+      this.logger.error(BOARD_ERROR_MESSAGES.VIEW_COUNT_UPDATE_FAILED);
     }
 
     const es_get_result: GetGetResult<{
@@ -349,15 +404,15 @@ export class BoardService {
       view_count?: number;
       recommend_count?: number;
     }> = await this.elasticsearchService.get({
-      index: 'board_free',
-      id: board_id.toString(),
+      index: BOARD_INDEX.FREE,
+      id: boardId.toString(),
     });
 
-    board_detail_data.view_count = es_get_result._source.view_count;
-    board_detail_data.comment_count = es_get_result._source.comment_count;
-    board_detail_data.recommend_count = es_get_result._source.recommend_count;
+    boardDetailData.view_count = es_get_result._source.view_count;
+    boardDetailData.comment_count = es_get_result._source.comment_count;
+    boardDetailData.recommend_count = es_get_result._source.recommend_count;
 
-    board_detail_data.near_board_list = {
+    boardDetailData.near_board_list = {
       ...(await this.entityManager.query(
         'select board_id, board_type, board_title, create_date ' +
           'from (select board_id, board_type, board_title, create_date ' +
@@ -366,19 +421,27 @@ export class BoardService {
           'select board_id, board_type, board_title, create_date ' +
           'from (select board_id, board_type, board_title, create_date ' +
           'from board where board_id > $1 and board_type = $2 order by board_id limit 1) as after_detail',
-        [board_id, board_detail_data.board_type],
+        [boardId, boardDetailData.board_type],
       )),
     };
 
-    return board_detail_data;
+    return boardDetailData;
   }
 
-  async board_modify(
+  /**
+   * 게시글 수정
+   * @param id - 게시글 ID
+   * @param boardModifyDto - 수정할 내용
+   * @param guard - 인증된 사용자 정보
+   * @returns 수정된 게시글 ID
+   * @throws HttpException - 권한이 없거나 수정 실패 시
+   */
+  async modifyBoard(
     id: number,
     boardModifyDto: BoardModifyDto,
     guard: { uuid: string; name: string },
   ) {
-    const board = await this.board_check_owner(id, guard);
+    const board = await this.checkBoardOwner(id, guard);
 
     if (!board) {
       throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST);
@@ -411,11 +474,17 @@ export class BoardService {
     return change_board.board_id;
   }
 
-  async board_check_owner(
-    board_id: number,
+  /**
+   * 게시글 작성자 확인
+   * @param boardId - 게시글 ID
+   * @param guard - 인증된 사용자 정보
+   * @returns 작성자가 맞으면 게시글, 아니면 null
+   */
+  async checkBoardOwner(
+    boardId: number,
     guard: { uuid: string },
   ): Promise<Board | null> {
-    const board = await this.findOne(board_id);
+    const board = await this.findOne(boardId);
     if (board.user_uuid == guard.uuid) {
       return board;
     } else {
@@ -423,7 +492,13 @@ export class BoardService {
     }
   }
 
-  async board_search_list_es(boardEsSearchDto: BoardEsSearchDto) {
+  /**
+   * 게시글 검색 (Elasticsearch - 검색어 기반)
+   * @param boardEsSearchDto - 검색 조건
+   * @returns Elasticsearch 검색 결과
+   * @throws HttpException - 잘못된 검색 파라미터
+   */
+  async searchBoardListEs(boardEsSearchDto: BoardEsSearchDto) {
     if (
       boardEsSearchDto.search_type != 0 &&
       boardEsSearchDto.search_string == ''
@@ -489,12 +564,18 @@ export class BoardService {
 
     const board_data: SearchResponse =
       await this.elasticsearchService.search(search_sql);
-    Logger.log(`board_search_list_es latency ${Date.now() - now}ms`, `Board`);
+    this.logger.log(`Elasticsearch search completed in ${Date.now() - now}ms`);
 
     return board_data;
   }
 
-  async board_search_list_es_newest(boardEsNewestDto: BoardEsNewestDto) {
+  /**
+   * 게시글 검색 (Elasticsearch - 최신순 정렬)
+   * @param boardEsNewestDto - 검색 조건
+   * @returns Elasticsearch 검색 결과 (최신순)
+   * @throws HttpException - 잘못된 검색 파라미터
+   */
+  async searchBoardListEsNewest(boardEsNewestDto: BoardEsNewestDto) {
     const now = Date.now();
 
     const search_sql: BoardEsNewestPayload = {
@@ -557,15 +638,19 @@ export class BoardService {
     }
 
     const board_data = await this.elasticsearchService.search(search_sql);
-    Logger.log(
-      `board_search_list_es_newest latency ${Date.now() - now}ms`,
-      `Board`,
+    this.logger.log(
+      `Elasticsearch newest search completed in ${Date.now() - now}ms`,
     );
 
     return board_data;
   }
 
-  async board_search_list_es_score(boardEsScoreDto: BoardEsScoreDto) {
+  /**
+   * 게시글 검색 (Elasticsearch - 검색 점수 기반 정렬)
+   * @param boardEsScoreDto - 검색 조건
+   * @returns Elasticsearch 검색 결과 (점수순)
+   */
+  async searchBoardListEsScore(boardEsScoreDto: BoardEsScoreDto) {
     const now = Date.now();
 
     const search_sql: BoardEsScorePayload = {
@@ -616,15 +701,18 @@ export class BoardService {
     }
 
     const board_data = await this.elasticsearchService.search(search_sql);
-    Logger.log(
-      `board_search_list_es_score latency ${Date.now() - now}ms`,
-      `Board`,
+    this.logger.log(
+      `Elasticsearch score search completed in ${Date.now() - now}ms`,
     );
 
     return board_data;
   }
 
-  async insert_migration() {
+  /**
+   * 마이그레이션 (사용하지 않음)
+   * @deprecated
+   */
+  async insertMigration() {
     return false;
   }
 }
