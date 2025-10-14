@@ -7,7 +7,12 @@ import { LocalStrategy } from './strategy/local.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategy/jwt.strategy';
 import { ConfigService } from '@nestjs/config';
+import { JWT_CONFIG } from './constants/auth.constants';
 
+/**
+ * 인증 모듈
+ * 로컬 및 소셜 로그인, JWT 토큰 관리를 담당합니다.
+ */
 @Module({
   imports: [
     UserModule,
@@ -15,7 +20,7 @@ import { ConfigService } from '@nestjs/config';
     JwtModule.registerAsync({
       useFactory: async (configService: ConfigService) => ({
         secret: configService.getOrThrow('JWT_SECRET'),
-        signOptions: { expiresIn: '60m' },
+        signOptions: { expiresIn: JWT_CONFIG.EXPIRES_IN },
       }),
       inject: [ConfigService],
     }),

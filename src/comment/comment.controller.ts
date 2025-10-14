@@ -8,15 +8,26 @@ import {
   Delete,
   UseGuards,
   Request,
+  HttpStatus,
 } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { 
+  ApiBearerAuth, 
+  ApiTags, 
+  ApiOperation, 
+  ApiResponse,
+  ApiParam,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { CommentInsertDto } from './dto/comment-insert.dto';
 import { CommentDeleteDto } from './dto/comment-delete.dto';
 
+/**
+ * 댓글 컨트롤러
+ * 댓글 CRUD 기능을 제공합니다.
+ */
 @ApiTags('Comment API')
 @Controller('comment')
 export class CommentController {
@@ -47,42 +58,89 @@ export class CommentController {
     return this.commentService.remove(+id);
   }
 
+  /**
+   * 댓글 작성
+   */
+  @ApiOperation({ 
+    summary: '댓글 작성',
+    description: '게시글에 댓글을 작성합니다. (로그인 필요)',
+  })
+  @ApiResponse({ 
+    status: HttpStatus.CREATED, 
+    description: '댓글이 작성되었습니다.',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('insert')
-  async comment_insert(
+  async insertComment(
     @Body() commentInsertDto: CommentInsertDto,
     @Request() guard,
   ) {
-    return await this.commentService.comment_insert(
+    return await this.commentService.insertComment(
       commentInsertDto,
       guard.user,
     );
   }
 
+  /**
+   * 댓글 삭제
+   */
+  @ApiOperation({ 
+    summary: '댓글 삭제',
+    description: '자신이 작성한 댓글을 삭제합니다.',
+  })
+  @ApiResponse({ 
+    status: HttpStatus.OK, 
+    description: '댓글이 삭제되었습니다.',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('delete')
-  async comment_delete(
+  async deleteComment(
     @Body() commentDeleteDto: CommentDeleteDto,
     @Request() guard,
   ) {
-    return await this.commentService.comment_delete(
+    return await this.commentService.deleteComment(
       commentDeleteDto,
       guard.user,
     );
   }
 
+  /**
+   * 댓글 목록 조회
+   */
+  @ApiOperation({ 
+    summary: '댓글 목록 조회',
+    description: '특정 게시글의 댓글 목록을 페이징하여 조회합니다.',
+  })
+  @ApiParam({ name: 'board_id', description: '게시글 ID' })
+  @ApiParam({ name: 'page', description: '페이지 번호 (1부터 시작)' })
+  @ApiResponse({ 
+    status: HttpStatus.OK, 
+    description: '댓글 목록을 반환합니다.',
+  })
   @Get('list/:board_id/:page')
-  comment_list(
-    @Param('board_id') board_id: number,
+  getCommentList(
+    @Param('board_id') boardId: number,
     @Param('page') page: number,
   ) {
-    return this.commentService.comment_list(+board_id, +page);
+    return this.commentService.getCommentList(+boardId, +page);
   }
 
+  /**
+   * 댓글 개수 조회
+   */
+  @ApiOperation({ 
+    summary: '댓글 개수 조회',
+    description: '특정 게시글의 댓글 개수를 조회합니다.',
+  })
+  @ApiParam({ name: 'board_id', description: '게시글 ID' })
+  @ApiResponse({ 
+    status: HttpStatus.OK, 
+    description: '댓글 개수를 반환합니다.',
+  })
   @Get('count/:board_id')
-  comment_list_count(@Param('board_id') board_id: number) {
-    return this.commentService.comment_list_count(board_id);
+  getCommentCount(@Param('board_id') boardId: number) {
+    return this.commentService.getCommentCount(boardId);
   }
 }

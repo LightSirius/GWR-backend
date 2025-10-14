@@ -32,8 +32,14 @@ import {
 } from './dto/notice-insert.response.dto';
 import { NoticeMainDto } from './dto/notice-main.dto';
 
+/**
+ * 공지사항 서비스
+ * 공지사항 CRUD 및 Elasticsearch 연동을 담당합니다.
+ */
 @Injectable()
 export class NoticeService {
+  private readonly logger = new Logger(NoticeService.name);
+
   constructor(
     @Inject('REDIS_CLIENT')
     private readonly redis: RedisClientType,
@@ -118,7 +124,7 @@ export class NoticeService {
       noticeSearchDto.search_type != null &&
       noticeSearchDto.search_string == null
     ) {
-      console.log('Fail to req');
+      this.logger.error('Failed to create notice in Elasticsearch');
       return { total_count: 0, notice_summary: [] };
     }
     if (
@@ -126,7 +132,7 @@ export class NoticeService {
       (noticeSearchDto.search_string == null ||
         noticeSearchDto.search_string == '')
     ) {
-      console.log('Fail to req');
+      this.logger.error('Failed to create notice in Elasticsearch');
       return { total_count: 0, notice_summary: [] };
     }
 
@@ -289,18 +295,24 @@ export class NoticeService {
     return notice_main_data;
   }
 
-  async notice_detail(notice_id: number) {
-    const now = Date.now();
-    let notice_detail_data = new NoticeDetailDto();
+  /**
+   * 공지사항 상세 조회 (조회수 증가)
+   * @param noticeId - 공지사항 ID
+   * @returns 공지사항 상세 정보
+   * @throws HttpException - 공지사항을 찾을 수 없을 때
+   */
+  async getNoticeDetail(noticeId: number) {
+    const startTime = Date.now();
+    let noticeDetailData = new NoticeDetailDto();
 
-    if (await this.redis.hExists('notice_detail_list', notice_id.toString())) {
-      notice_detail_data = {
+    if (await this.redis.hExists('notice_detail_list', noticeId.toString())) {
+      noticeDetailData = {
         ...JSON.parse(
-          await this.redis.hGet('notice_detail_list', notice_id.toString()),
+          await this.redis.hGet('notice_detail_list', noticeId.toString()),
         ),
       };
     } else {
-      notice_detail_data = {
+      noticeDetailData = {
         ...(await this.noticeRepository
           .createQueryBuilder('notice')
           .select([
@@ -310,32 +322,32 @@ export class NoticeService {
             'notice.notice_contents AS notice_contents',
             'notice.update_date AS update_date',
           ])
-          .where('notice.notice_id = :notice_id', { notice_id: notice_id })
+          .where('notice.notice_id = :notice_id', { notice_id: noticeId })
           .getRawOne()),
       };
     }
 
-    if (isEmpty(notice_detail_data)) {
-      throw new HttpException('Not Found', HttpStatus.INTERNAL_SERVER_ERROR);
+    if (isEmpty(noticeDetailData)) {
+      throw new HttpException('공지사항을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
     }
 
     await this.redis.hSet(
       'notice_detail_list',
-      notice_id.toString(),
-      JSON.stringify(notice_detail_data),
+      noticeId.toString(),
+      JSON.stringify(noticeDetailData),
     );
 
     await this.redis.multi();
 
     await this.elasticsearchService.update({
       index: 'notice',
-      id: notice_id.toString(),
+      id: noticeId.toString(),
       script: {
         source: 'ctx._source.view_count += 1',
       },
     });
 
-    const es_get_result: GetGetResult<{
+    const esGetResult: GetGetResult<{
       notice_id: number;
       notice_title: string;
       notice_contents: string;
@@ -345,14 +357,14 @@ export class NoticeService {
       recommend_count?: number;
     }> = await this.elasticsearchService.get({
       index: 'notice',
-      id: notice_id.toString(),
+      id: noticeId.toString(),
     });
 
-    notice_detail_data.view_count = es_get_result._source.view_count;
-    notice_detail_data.comment_count = es_get_result._source.comment_count;
-    notice_detail_data.recommend_count = es_get_result._source.recommend_count;
+    noticeDetailData.view_count = esGetResult._source.view_count;
+    noticeDetailData.comment_count = esGetResult._source.comment_count;
+    noticeDetailData.recommend_count = esGetResult._source.recommend_count;
 
-    notice_detail_data.near_notice_list = {
+    noticeDetailData.near_notice_list = {
       ...(await this.entityManager.query(
         'select notice_id, notice_type, notice_title, create_date ' +
           'from (select notice_id, notice_type, notice_title, create_date ' +
@@ -361,11 +373,11 @@ export class NoticeService {
           'select notice_id, notice_type, notice_title, create_date ' +
           'from (select notice_id, notice_type, notice_title, create_date ' +
           'from board where notice_id > $1 and notice_type = $2 order by notice_id limit 1) as after_detail',
-        [notice_id, notice_detail_data.notice_type],
+        [noticeId, noticeDetailData.notice_type],
       )),
     };
 
-    console.log(Date.now() - now);
-    return notice_detail_data;
+    this.logger.log(`Notice detail retrieved in ${Date.now() - startTime}ms`);
+    return noticeDetailData;
   }
 }
