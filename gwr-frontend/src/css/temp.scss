@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-@import "tailwindcss";
 
 /* :root {
   --background: #ffffff;
@@ -36,6 +34,47 @@ body {
   position: relative;
   min-width: 1000px;
   min-height: 100%;
+}
+
+.portal {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    #00f0ff,
+    #ff00ff,
+    #ff0,
+    #00f0ff
+  );
+  animation: spin 4s linear infinite, pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 40px #00f0ff, 0 0 80px #ff00ff, 0 0 120px #ff0;
+  overflow: hidden;
+}
+
+.particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, #fff 1px, transparent 1px);
+  background-size: 10px 10px;
+  animation: moveParticles 3s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes moveParticles {
+  0% { background-position: 0 0; }
+  100% { background-position: 100px 100px; }
 }
 
 /* 동적 배경을 위한 클래스들 */
@@ -171,12 +210,3 @@ body.nighttime {
   top: 46px;
   left: 50%;
 }
-=======
-
-@import "../css/reset.scss";
-/* @import "tailwindcss"; */
-@import "../css/style.scss";
-
-@import 'swiper/css';
-@import 'swiper/css/pagination';
->>>>>>> Stashed changes

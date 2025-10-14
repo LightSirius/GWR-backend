@@ -30,6 +30,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-gray-100`}
       >
+<<<<<<< Updated upstream
         <div id="theme_top">
           <div className="theme01"></div>
           <div className="theme02"></div>
@@ -51,6 +52,14 @@ export default function RootLayout({
               {children}
             </main>
             <div id="footer_padding" style={{ paddingTop: '200px' }}></div>
+=======
+        <AuthProvider>
+          <div className="wrap">
+            <Header />
+            <main className="main">
+              {children}
+            </main>
+>>>>>>> Stashed changes
             <Footer />
           </div>
         </AuthProvider>

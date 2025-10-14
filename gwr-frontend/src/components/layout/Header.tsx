@@ -1,5 +1,6 @@
 'use client';
 
+<<<<<<< Updated upstream
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +9,24 @@ const Header = () => {
   const { isAuthenticated, logout, isLoading } = useAuth();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+=======
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePathname } from 'next/navigation';
+
+const Header = () => {
+  const { isAuthenticated, logout, isLoading } = useAuth();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<boolean>(false); // 메뉴 활성화 상태
+  const menuRefs = useRef<(HTMLUListElement | null)[]>([]); // 각 2depth li ul ref 저장
+  const [bgHeight, setBgHeight] = useState<number>(0);
+  const [hoverMenuIndex, setHoverMenuIndex] = useState<number | null>(null); // 메뉴 인덱스
+  const pathname = usePathname(); // 현재 URL
+  const [activeMenuIndex, setActiveMenuIndex] = useState<number | null>(null);
+  const [headerState, setHeaderState] = useState<'mainScrolled' | 'subActive' | ''>('');
+  
+>>>>>>> Stashed changes
 
   const menuItems = [
     {
@@ -29,7 +48,11 @@ const Header = () => {
       ]
     },
     {
+<<<<<<< Updated upstream
       name: '자료실',
+=======
+      name: '다운로드',
+>>>>>>> Stashed changes
       href: '/download',
       submenu: [
         { name: '다운로드', href: '/download/client' },
@@ -37,7 +60,11 @@ const Header = () => {
       ]
     },
     {
+<<<<<<< Updated upstream
       name: '고객센터',
+=======
+      name: '고객지원',
+>>>>>>> Stashed changes
       href: '/support',
       submenu: [
         { name: 'FAQ', href: '/support/faq' },
@@ -46,6 +73,7 @@ const Header = () => {
     }
   ];
 
+<<<<<<< Updated upstream
   // 스크롤 이벤트 처리
   useEffect(() => {
     const handleScroll = () => {
@@ -84,10 +112,109 @@ const Header = () => {
           </div>
           
           <div className="flex items-center space-x-4">
+=======
+  // 경로 및 스크롤 상태 관리
+  useEffect(() => {
+    if (pathname === '/') {
+      const handleScroll = () => {
+        if (window.scrollY >= 10) {
+          setHeaderState('mainScrolled');
+        } else {
+          setHeaderState('');
+        }
+      };
+      window.addEventListener('scroll', handleScroll);
+      // 초기 체크
+      handleScroll();
+      return () => window.removeEventListener('scroll', handleScroll);
+    } else {
+      setHeaderState('subActive');
+    }
+  }, [pathname]);
+
+  // 현재 경로에 따른 활성 메뉴 인덱스 설정
+  useEffect(() => {
+    const index = menuItems.findIndex((item) =>
+      item.submenu?.some((sub) => sub.href === pathname)
+    );
+    setActiveMenuIndex(index >= 0 ? index : null);
+  }, [pathname]);
+
+  // 메뉴 호버 이벤트
+  const handleMouseEnterMenu = () => {
+    setActiveMenu(true);
+  };
+
+  // 메뉴 영역을 벗어났을 때
+  const handleMouseLeaveMenu = () => {
+    setActiveMenu(false);
+  };
+
+  // 모든 2depth ul 중 가장 큰 height 찾기
+  useEffect(() => {
+    let maxHeight = 0;
+    menuRefs.current.forEach((ul) => {
+      if (ul) {
+        maxHeight = Math.max(maxHeight, ul.scrollHeight);
+      }
+    });
+    setBgHeight(activeMenu ? maxHeight : 0);
+  }, [activeMenu]);
+
+  // 현재 보여지는 메뉴 인덱스 (호버 중이면 호버 인덱스, 아니면 활성 인덱스)
+  const currentIndex = hoverMenuIndex ?? activeMenuIndex;
+
+  return (
+    <header className={`${activeMenu ? 'active' : ''} ${headerState}`}>
+      {/*  */}
+      <div className={`headerWrap`}>
+        <div className="gnb">
+          <h1 onMouseLeave={handleMouseLeaveMenu}>
+            <Link href="/">
+              GWR
+            </Link>
+          </h1>
+          {/* 메뉴 */}
+          <nav onMouseEnter={handleMouseEnterMenu}>
+            <ul>
+              {/* 1depth */}
+              {menuItems.map((item, index) => (
+                <li
+                  key={item.name}
+                  onMouseEnter={() => setHoverMenuIndex(index)}
+                >
+                  <Link
+                    href={item.href}
+                  >
+                    {item.name}
+                  </Link>
+                  {/* 2depth */}
+                  <ul ref={(el) => { menuRefs.current[index] = el }}>
+                    {item.submenu.map((sub) => (
+                      <li 
+                        key={sub.name}
+                      >
+                        <Link
+                          href={sub.href}
+                        >
+                          {sub.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+        {/* utils */}
+        <ul className='utils' onMouseLeave={handleMouseLeaveMenu}>
+>>>>>>> Stashed changes
             {isLoading ? (
               <div className="text-gray-400">로딩중...</div>
             ) : isAuthenticated ? (
               <>
+<<<<<<< Updated upstream
                 <Link href="/profile" className="text-sm text-gray-300 hover:text-white transition-colors">
                   프로필
                 </Link>
@@ -150,6 +277,55 @@ const Header = () => {
             ))}
           </ul>
         </nav>
+=======
+                <li className='profile'>
+                  <Link href="/profile">
+                    프로필
+                  </Link>
+                  <span>님 환영합니다!</span>
+                </li>
+                <li className='logout'>
+                  <button
+                    onClick={logout}
+                  >
+                    로그아웃
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className='login'>
+                  <Link href="/login">
+                    로그인
+                  </Link>
+                </li>
+                <li className='register'>
+                  <Link href="/register">
+                    회원가입
+                  </Link>
+                </li>
+              </>
+            )}
+            <li className='gameStartBtn'>
+              <button>게임스타트</button>
+            </li>
+        </ul>
+        <div className={`headerBg`} style={{height: activeMenu ? `${bgHeight + 20}px` : "0px",}} onMouseLeave={handleMouseLeaveMenu}></div>
+        <div
+          className="hoverBg"
+          style={{
+            left: currentIndex !== null && menuRefs.current[currentIndex]
+                ? `${menuRefs.current[currentIndex]!.parentElement!.offsetLeft + 60}px`
+                : '0px',
+            width: currentIndex !== null && menuRefs.current[currentIndex]
+                ? `${menuRefs.current[currentIndex]!.parentElement!.offsetWidth}px`
+                : '0px',
+            height: bgHeight + 90 + 20, // 20은 padding
+            opacity: currentIndex !== null ? 1 : 0,
+          }}
+          onMouseLeave={handleMouseLeaveMenu}
+        />
+>>>>>>> Stashed changes
       </div>
     </header>
   );

@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+<<<<<<< Updated upstream
+=======
+import SubPageTitle from '@/components/layout/SubPageTitle';
+import SubPageLogin from '@/components/layout/SubPageLogin';
+>>>>>>> Stashed changes
 
 interface Notice {
   id: number;
@@ -25,52 +30,94 @@ const NoticePage = () => {
       id: 1,
       type: '공지',
       title: 'GWR Game Portal 오픈 베타 서비스 안내',
+<<<<<<< Updated upstream
       content: '안녕하세요, GWR Game Portal입니다. 오픈 베타 서비스가 시작되었습니다. 많은 관심과 참여 부탁드립니다.',
       date: '2025-01-27',
       author: '관리자',
       views: 1250,
       isImportant: true
+=======
+      content:
+        '안녕하세요, GWR Game Portal입니다. 오픈 베타 서비스가 시작되었습니다. 많은 관심과 참여 부탁드립니다.',
+      date: '2025-01-27',
+      author: '관리자',
+      views: 1250,
+      isImportant: true,
+>>>>>>> Stashed changes
     },
     {
       id: 2,
       type: '점검',
       title: '정기 점검 안내 (1월 28일 02:00~06:00)',
+<<<<<<< Updated upstream
       content: '서버 안정화를 위한 정기 점검이 예정되어 있습니다. 점검 시간 동안 서비스 이용이 제한됩니다.',
       date: '2025-01-26',
       author: '시스템관리자',
       views: 890
+=======
+      content:
+        '서버 안정화를 위한 정기 점검이 예정되어 있습니다. 점검 시간 동안 서비스 이용이 제한됩니다.',
+      date: '2025-01-26',
+      author: '시스템관리자',
+      views: 890,
+>>>>>>> Stashed changes
     },
     {
       id: 3,
       type: '이벤트',
       title: '신규 가입자 환영 이벤트 진행 중!',
+<<<<<<< Updated upstream
       content: '신규 가입자를 위한 특별 이벤트가 진행 중입니다. 다양한 혜택을 놓치지 마세요!',
       date: '2025-01-25',
       author: '이벤트팀',
       views: 567
+=======
+      content:
+        '신규 가입자를 위한 특별 이벤트가 진행 중입니다. 다양한 혜택을 놓치지 마세요!',
+      date: '2025-01-25',
+      author: '이벤트팀',
+      views: 567,
+>>>>>>> Stashed changes
     },
     {
       id: 4,
       type: '패치',
       title: 'v1.2.0 업데이트 내용 안내',
+<<<<<<< Updated upstream
       content: '새로운 기능과 버그 수정이 포함된 v1.2.0 업데이트가 적용되었습니다.',
       date: '2025-01-24',
       author: '개발팀',
       views: 432
+=======
+      content:
+        '새로운 기능과 버그 수정이 포함된 v1.2.0 업데이트가 적용되었습니다.',
+      date: '2025-01-24',
+      author: '개발팀',
+      views: 432,
+>>>>>>> Stashed changes
     },
     {
       id: 5,
       type: '공지',
       title: '개인정보 처리방침 개정 안내',
+<<<<<<< Updated upstream
       content: '개인정보 보호법 개정에 따라 개인정보 처리방침이 개정되었습니다.',
       date: '2025-01-23',
       author: '관리자',
       views: 321
+=======
+      content:
+        '개인정보 보호법 개정에 따라 개인정보 처리방침이 개정되었습니다.',
+      date: '2025-01-23',
+      author: '관리자',
+      views: 321,
+>>>>>>> Stashed changes
     },
     {
       id: 6,
       type: '이벤트',
       title: '겨울 시즌 특별 이벤트',
+<<<<<<< Updated upstream
       content: '겨울 시즌을 맞아 특별한 이벤트가 준비되었습니다. 많은 참여 부탁드립니다.',
       date: '2025-01-22',
       author: '이벤트팀',
@@ -109,12 +156,30 @@ const NoticePage = () => {
     const typeMatch = selectedType === '전체' || notice.type === selectedType;
     const searchMatch = notice.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        notice.content.toLowerCase().includes(searchTerm.toLowerCase());
+=======
+      content:
+        '겨울 시즌을 맞아 특별한 이벤트가 준비되었습니다. 많은 참여 부탁드립니다.',
+      date: '2025-01-22',
+      author: '이벤트팀',
+      views: 789,
+    },
+  ]);
+
+  const noticeTypes = ['전체', '공지', '점검', '이벤트', '패치'];
+
+  const filteredNotices = notices.filter((notice) => {
+    const typeMatch = selectedType === '전체' || notice.type === selectedType;
+    const searchMatch =
+      notice.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      notice.content.toLowerCase().includes(searchTerm.toLowerCase());
+>>>>>>> Stashed changes
     return typeMatch && searchMatch;
   });
 
   const itemsPerPage = 10;
   const totalPages = Math.ceil(filteredNotices.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
+<<<<<<< Updated upstream
   const paginatedNotices = filteredNotices.slice(startIndex, startIndex + itemsPerPage);
 
   const getTypeColor = (type: string) => {
@@ -124,10 +189,30 @@ const NoticePage = () => {
       case '이벤트': return 'bg-green-600';
       case '패치': return 'bg-blue-600';
       default: return 'bg-gray-600';
+=======
+  const paginatedNotices = filteredNotices.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case '공지':
+        return 'bg-red-600';
+      case '점검':
+        return 'bg-yellow-600';
+      case '이벤트':
+        return 'bg-green-600';
+      case '패치':
+        return 'bg-blue-600';
+      default:
+        return 'bg-gray-600';
+>>>>>>> Stashed changes
     }
   };
 
   return (
+<<<<<<< Updated upstream
     <div className="min-h-screen text-white pt-32">
       {/* Background Overlay */}
       <div className="absolute inset-0 bg-black/50 z-10"></div>
@@ -135,6 +220,36 @@ const NoticePage = () => {
       {/* Main Content */}
       <div className="relative z-20 container mx-auto px-4 py-8">
         {/* Header */}
+=======
+    <div className="subWrap">
+      <div className="inner">
+        <div className="left">
+          <SubPageTitle
+            title="공지사항"
+            firstDepth="새소식"
+            titleUri="/news/notice"
+          />
+
+          <div className="tblComponent">
+            <table>
+              <colgroup>
+                <col />
+              </colgroup>
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <SubPageLogin />
+      </div>
+
+      {/* Background Overlay */}
+      {/* <div className="absolute inset-0 bg-black/50 z-10"></div> */}
+
+      {/* Main Content */}
+      {/* <div className="relative z-20 container mx-auto px-4 py-8">
+>>>>>>> Stashed changes
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-purple-400 bg-clip-text text-transparent mb-4">
             공지사항
@@ -143,20 +258,33 @@ const NoticePage = () => {
             GWR Game Portal의 최신 소식을 확인하세요
             {currentTime && (
               <span className="block text-sm text-gray-400 mt-2">
+<<<<<<< Updated upstream
                 {isDaytime ? '☀️ 낮 모드' : '🌙 밤 모드'} - {currentTime.toLocaleTimeString('ko-KR', { 
                   hour: '2-digit', 
                   minute: '2-digit',
                   hour12: false 
+=======
+                {isDaytime ? '☀️ 낮 모드' : '🌙 밤 모드'} -{' '}
+                {currentTime.toLocaleTimeString('ko-KR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+>>>>>>> Stashed changes
                 })}
               </span>
             )}
           </p>
         </div>
 
+<<<<<<< Updated upstream
         {/* Search and Filter */}
         <div className="bg-gray-900/90 backdrop-blur-md border border-gray-700 rounded-xl p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
+=======
+        <div className="bg-gray-900/90 backdrop-blur-md border border-gray-700 rounded-xl p-6 mb-8">
+          <div className="flex flex-col md:flex-row gap-4">
+>>>>>>> Stashed changes
             <div className="flex-1">
               <div className="relative">
                 <input
@@ -167,14 +295,32 @@ const NoticePage = () => {
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+<<<<<<< Updated upstream
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+=======
+                  <svg
+                    className="w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+>>>>>>> Stashed changes
                   </svg>
                 </div>
               </div>
             </div>
 
+<<<<<<< Updated upstream
             {/* Type Filter */}
+=======
+>>>>>>> Stashed changes
             <div className="flex gap-2">
               {noticeTypes.map((type) => (
                 <button
@@ -193,9 +339,13 @@ const NoticePage = () => {
           </div>
         </div>
 
+<<<<<<< Updated upstream
         {/* Notice List */}
         <div className="bg-gray-900/90 backdrop-blur-md border border-gray-700 rounded-xl overflow-hidden">
           {/* Table Header */}
+=======
+        <div className="bg-gray-900/90 backdrop-blur-md border border-gray-700 rounded-xl overflow-hidden">
+>>>>>>> Stashed changes
           <div className="bg-gray-800/50 border-b border-gray-700 px-6 py-4">
             <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-300">
               <div className="col-span-1">번호</div>
@@ -207,7 +357,10 @@ const NoticePage = () => {
             </div>
           </div>
 
+<<<<<<< Updated upstream
           {/* Notice Items */}
+=======
+>>>>>>> Stashed changes
           <div className="divide-y divide-gray-700">
             {paginatedNotices.length > 0 ? (
               paginatedNotices.map((notice, index) => (
@@ -222,7 +375,13 @@ const NoticePage = () => {
                       {startIndex + index + 1}
                     </div>
                     <div className="col-span-2">
+<<<<<<< Updated upstream
                       <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getTypeColor(notice.type)}`}>
+=======
+                      <span
+                        className={`inline-block px-2 py-1 rounded text-xs font-medium ${getTypeColor(notice.type)}`}
+                      >
+>>>>>>> Stashed changes
                         {notice.type}
                       </span>
                     </div>
@@ -256,7 +415,10 @@ const NoticePage = () => {
           </div>
         </div>
 
+<<<<<<< Updated upstream
         {/* Pagination */}
+=======
+>>>>>>> Stashed changes
         {totalPages > 1 && (
           <div className="flex justify-center mt-8">
             <div className="flex gap-2">
@@ -267,6 +429,7 @@ const NoticePage = () => {
               >
                 이전
               </button>
+<<<<<<< Updated upstream
               
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <button
@@ -284,6 +447,29 @@ const NoticePage = () => {
               
               <button
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+=======
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      currentPage === page
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
+
+              <button
+                onClick={() =>
+                  setCurrentPage(Math.min(totalPages, currentPage + 1))
+                }
+>>>>>>> Stashed changes
                 disabled={currentPage === totalPages}
                 className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -293,19 +479,41 @@ const NoticePage = () => {
           </div>
         )}
 
+<<<<<<< Updated upstream
         {/* Back to Home */}
+=======
+>>>>>>> Stashed changes
         <div className="text-center mt-8">
           <Link
             href="/"
             className="inline-flex items-center px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
           >
+<<<<<<< Updated upstream
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+=======
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+>>>>>>> Stashed changes
             </svg>
             홈으로 돌아가기
           </Link>
         </div>
+<<<<<<< Updated upstream
       </div>
+=======
+      </div> */}
+>>>>>>> Stashed changes
     </div>
   );
 };
