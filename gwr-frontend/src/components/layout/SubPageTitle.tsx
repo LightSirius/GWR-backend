@@ -1,3 +1,4 @@
+import { Breadcrumb } from '@chakra-ui/react';
 import Link from 'next/link';
 import React from 'react';
 
@@ -17,13 +18,23 @@ const SubPageTitle: React.FC<SubPageTitleProps> = ({
   return (
     <div className="subTitle">
       <h2>{title}</h2>
-      <ul className="location">
-        <li className="home"></li>
-        <li>{firstDepth}</li>
-        <li>
-          <Link href={titleUri}>{title}</Link>
-        </li>
-      </ul>
+      <div className="location">
+        <Breadcrumb.Root>
+          <Breadcrumb.List>
+            <Breadcrumb.Item>
+              <Breadcrumb.Link href="#">HOME</Breadcrumb.Link>
+            </Breadcrumb.Item>
+            <Breadcrumb.Separator />
+            <Breadcrumb.Item>
+              <Breadcrumb.Link href="#">{firstDepth}</Breadcrumb.Link>
+            </Breadcrumb.Item>
+            <Breadcrumb.Separator />
+            <Breadcrumb.Item>
+              <Breadcrumb.Link href={titleUri}>{title}</Breadcrumb.Link>
+            </Breadcrumb.Item>
+          </Breadcrumb.List>
+        </Breadcrumb.Root>
+      </div>
       {children}
     </div>
   );

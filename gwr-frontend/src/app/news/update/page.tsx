@@ -5,6 +5,7 @@ import Link from 'next/link';
 import SubPageTitle from '@/components/layout/SubPageTitle';
 import SubPageLogin from '@/components/layout/SubPageLogin';
 import {
+  Button,
   ButtonGroup,
   IconButton,
   Pagination,
@@ -12,7 +13,18 @@ import {
 } from '@chakra-ui/react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 
-const NoticePage = () => {
+interface Update {
+  id: number;
+  type: '공지' | '점검' | '이벤트' | '패치';
+  title: string;
+  content: string;
+  date: string;
+  author: string;
+  views: number;
+  isImportant?: boolean;
+}
+
+const UpdatePage = () => {
   const items = [
     {
       id: 1,
@@ -101,17 +113,10 @@ const NoticePage = () => {
       <div className="inner">
         <div className="left">
           <SubPageTitle
-            title="공지사항"
             firstDepth="새소식"
-            titleUri="/news/notice"
+            title="업데이트"
+            titleUri="/news/update"
           />
-
-          <SegmentGroup.Root defaultValue="전체" className="tabWrap">
-            <SegmentGroup.Indicator />
-            <SegmentGroup.Items
-              items={['전체', '공지사항', '점검', '이벤트']}
-            />
-          </SegmentGroup.Root>
 
           {/* 테이블 */}
           <div className="tblComponent">
@@ -225,4 +230,4 @@ const NoticePage = () => {
   );
 };
 
-export default NoticePage;
+export default UpdatePage;
