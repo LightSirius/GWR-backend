@@ -12,10 +12,12 @@ interface NoticeStore {
   noticeList: NoticeItem[];
   maintenanceList: NoticeItem[];
   eventList: NoticeItem[];
+  isLoading: boolean;
   setNoticeData: (data: {
     noticeMainList: NoticeItem[];
     noticeListArray: NoticeItem[][];
   }) => void;
+  setIsLoading: (loading: boolean) => void;
 }
 
 export const useMainNoticeStore = create<NoticeStore>((set) => ({
@@ -23,6 +25,7 @@ export const useMainNoticeStore = create<NoticeStore>((set) => ({
   noticeList: [],
   maintenanceList: [],
   eventList: [],
+  isLoading: false,
   setNoticeData: (data) =>
     set({
       noticeMainList: data.noticeMainList || [],
@@ -30,4 +33,5 @@ export const useMainNoticeStore = create<NoticeStore>((set) => ({
       maintenanceList: data.noticeListArray?.[1] || [],
       eventList: data.noticeListArray?.[2] || [],
     }),
+  setIsLoading: (loading) => set({ isLoading: loading }),
 }));

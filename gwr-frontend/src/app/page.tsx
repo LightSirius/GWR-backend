@@ -4,7 +4,7 @@ import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 import Link from 'next/link';
 import { useMainNoticeStore } from './store/useMainNoticeStore';
 import { useEffect } from 'react';
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+import { Skeleton } from '@chakra-ui/react';
 const HomePage = () => {
   // 임시 데이터 (나중에 백엔드 API로 교체)
   const notices = [
@@ -137,16 +137,28 @@ const HomePage = () => {
     },
   ];
 
-  const { setNoticeData, noticeMainList, eventList } = useMainNoticeStore();
+  const { setNoticeData, noticeMainList, eventList, isLoading, setIsLoading } =
+    useMainNoticeStore();
 
   // 메인 노티스
   useEffect(() => {
-    fetch(`${BASE_URL}/notice/main`)
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/notice/main`,
+        );
+        const data = await res.json();
         setNoticeData(data);
-      });
-  }, [setNoticeData]);
+        setIsLoading(false);
+      } catch (e) {
+        console.error(e);
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [setIsLoading, setNoticeData]);
 
   return (
     <>
@@ -195,35 +207,50 @@ const HomePage = () => {
               </Link>
             </div>
             <ul className="mainTable">
-              {noticeMainList?.map((notice) => {
-                // 숫자를 한글로 변환
-                const typeMap = {
-                  0: '공지',
-                  1: '점검',
-                  2: '이벤트',
-                } as const;
-
-                // 날짜 포맷 (예: 2025-10-15T22:27:55.509Z → 2025-10-15)
-                const formattedDate = new Date(notice.create_date)
-                  .toISOString()
-                  .split('T')[0];
-
-                return (
-                  <li key={notice.notice_id}>
-                    <span className="badge">
-                      {notice.notice_type === 0
-                        ? '공지'
-                        : notice.notice_type === 1
-                          ? '점검'
-                          : '이벤트'}
-                    </span>
-                    <Link href={`/notice/detail/${notice.notice_id}`}>
-                      {notice.notice_title}
-                    </Link>
-                    <span className="date">{formattedDate}</span>
+              {isLoading ? (
+                // 로딩 중
+                Array.from({ length: 5 }).map((_, i) => (
+                  <li
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Skeleton height="20px" width="50px" borderRadius="6px" />
+                    {/* badge 자리 */}
+                    <Skeleton height="18px" flex="1" /> {/* 제목 자리 */}
+                    <Skeleton height="16px" width="80px" /> {/* 날짜 자리 */}
                   </li>
-                );
-              })}
+                ))
+              ) : noticeMainList && noticeMainList.length > 0 ? (
+                noticeMainList.map((notice) => {
+                  const formattedDate = new Date(notice.create_date)
+                    .toISOString()
+                    .split('T')[0];
+
+                  return (
+                    <li key={notice.notice_id}>
+                      <span className="badge">
+                        {notice.notice_type === 0
+                          ? '공지'
+                          : notice.notice_type === 1
+                            ? '점검'
+                            : '이벤트'}
+                      </span>
+                      <Link href={`/notice/detail/${notice.notice_id}`}>
+                        {notice.notice_title}
+                      </Link>
+                      <span className="date">{formattedDate}</span>
+                    </li>
+                  );
+                })
+              ) : (
+                <>
+                  <li className="noData notice">등록된 공지가 없습니다.</li>
+                </>
+              )}
             </ul>
           </div>
 

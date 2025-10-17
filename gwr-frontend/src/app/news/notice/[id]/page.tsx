@@ -212,51 +212,12 @@ const NoticeDetailPage = () => {
 
           {/* 버튼그룹 */}
           <div className="btnWrap right">
+            <Link href="/news/notice" className="default">
+              목록
+            </Link>
+            <button className="default">수정</button>
+            <button className="default">삭제</button>
             <button className="primary">글쓰기</button>
-          </div>
-
-          {/* 페이지네이션 */}
-          <Pagination.Root
-            count={20}
-            pageSize={2}
-            defaultPage={1}
-            className="pagination"
-          >
-            <ButtonGroup variant="ghost" size="sm">
-              <Pagination.PrevTrigger asChild>
-                <IconButton>
-                  <LuChevronLeft />
-                </IconButton>
-              </Pagination.PrevTrigger>
-
-              <Pagination.Items
-                render={(page) => (
-                  <IconButton variant={{ base: 'ghost', _selected: 'outline' }}>
-                    {page.value}
-                  </IconButton>
-                )}
-              />
-
-              <Pagination.NextTrigger asChild>
-                <IconButton>
-                  <LuChevronRight />
-                </IconButton>
-              </Pagination.NextTrigger>
-            </ButtonGroup>
-          </Pagination.Root>
-
-          {/* 검색 */}
-          <div className="searchArea">
-            <select name="" id="">
-              <option value="">최신순</option>
-              <option value="">정확도순</option>
-            </select>
-            <select name="" id="">
-              <option value="">제목</option>
-              <option value="">내용</option>
-            </select>
-            <input type="text" />
-            <button>검색</button>
           </div>
         </div>
 

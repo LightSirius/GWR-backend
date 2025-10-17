@@ -4,7 +4,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import SubPageTitle from '@/components/layout/SubPageTitle';
 import SubPageLogin from '@/components/layout/SubPageLogin';
-import { ButtonGroup, IconButton, Pagination } from '@chakra-ui/react';
+import {
+  ButtonGroup,
+  IconButton,
+  Pagination,
+  Skeleton,
+} from '@chakra-ui/react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -151,13 +156,25 @@ const FreeBoardPage = () => {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={5}>
-                      <div className="noData">
-                        게시글을 불러오는 중입니다...
-                      </div>
-                    </td>
-                  </tr>
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <tr key={i}>
+                      <td className="agnC">
+                        <Skeleton height="16px" width="24px" mx="auto" />
+                      </td>
+                      <td>
+                        <Skeleton height="16px" width="100%" />
+                      </td>
+                      <td className="agnC">
+                        <Skeleton height="16px" width="60px" mx="auto" />
+                      </td>
+                      <td className="agnC">
+                        <Skeleton height="16px" width="30px" mx="auto" />
+                      </td>
+                      <td className="agnC">
+                        <Skeleton height="16px" width="70px" mx="auto" />
+                      </td>
+                    </tr>
+                  ))
                 ) : posts.length > 0 ? (
                   posts.map((post) => (
                     <tr key={post.board_id}>

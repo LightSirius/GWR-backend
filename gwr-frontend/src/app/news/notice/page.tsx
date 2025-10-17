@@ -171,7 +171,9 @@ const NoticePage = () => {
 
           {/* 버튼그룹 */}
           <div className="btnWrap right">
-            <button className="primary">글쓰기</button>
+            <Link href="/news/notice/write" className="primary">
+              글쓰기
+            </Link>
           </div>
 
           {/* 페이지네이션 */}
