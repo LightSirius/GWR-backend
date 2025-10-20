@@ -1,7 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { EditorContent, EditorContext, useEditor } from '@tiptap/react';
+import {
+  EditorContent,
+  EditorContext,
+  ReactNodeViewRenderer,
+  useEditor,
+} from '@tiptap/react';
 
 // --- Tiptap Core Extensions ---
 import { StarterKit } from '@tiptap/starter-kit';
@@ -74,6 +79,8 @@ import { handleImageUpload, MAX_FILE_SIZE } from '@/lib/tiptap-utils';
 import '@/components/tiptap-templates/simple/simple-editor.scss';
 
 import content from '@/components/tiptap-templates/simple/data/content.json';
+import { ResizableImage } from '@/components/utils/ResizableImage';
+import { ResizableImageComponent } from '@/components/utils/ResizableImageComponent';
 
 const MainToolbarContent = ({
   onHighlighterClick,
@@ -211,6 +218,11 @@ export const SimpleEditor = React.forwardRef((props, ref) => {
           enableClickSelection: true,
         },
       }),
+      ResizableImage.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(ResizableImageComponent);
+        },
+      }),
       HorizontalRule,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       TaskList,
@@ -225,11 +237,30 @@ export const SimpleEditor = React.forwardRef((props, ref) => {
         accept: 'image/*',
         maxSize: MAX_FILE_SIZE,
         limit: 3,
-        upload: handleImageUpload,
+        upload: async (file) => {
+          const url = await handleImageUpload(file);
+
+          // setUploadedUrl(url); // editor 준비되면 useEffect에서 삽입
+
+          return url; // upload 함수는 URL만 반환하도록
+        },
         onError: (error) => console.error('Upload failed:', error),
       }),
     ],
   });
+
+  // 이미지 리사이징 기능
+  // const [uploadedUrl, setUploadedUrl] = React.useState<string | null>(null);
+
+  // React.useEffect(() => {
+  //   if (editor && uploadedUrl) {
+  //     editor.commands.insertContent({
+  //       type: 'resizableImage',
+  //       attrs: { src: uploadedUrl, width: 200, height: 'auto' },
+  //     });
+  //     setUploadedUrl(null); // 한 번만 삽입
+  //   }
+  // }, [editor, uploadedUrl]);
 
   const rect = useCursorVisibility({
     editor,

@@ -29,6 +29,7 @@
     "@tiptap/pm": "^3.7.2",
     "@tiptap/react": "^3.7.2",
     "@tiptap/starter-kit": "^3.7.2",
+    "aws-sdk": "^2.1692.0",
     "framer-motion": "^12.23.24",
     "lightningcss": "^1.30.2",
     "lodash.throttle": "^4.1.1",

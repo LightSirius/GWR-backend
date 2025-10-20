@@ -11,8 +11,36 @@ import {
   SegmentGroup,
 } from '@chakra-ui/react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
+import { NoticeDetail, useNoticeStore } from '@/app/store/useNoticeStore';
+import { useParams } from 'next/navigation';
+import Loading from '@/components/layout/Loading';
 
 const NoticeDetailPage = () => {
+  const { id } = useParams();
+  const { getDetail, isLoading } = useNoticeStore();
+  const [detail, setDetail] = useState<NoticeDetail | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchDetail = async () => {
+      try {
+        const data = await getDetail(Number(id));
+        setDetail(data);
+      } catch (err) {
+        console.error('공지 상세 조회 실패', err);
+      }
+    };
+
+    fetchDetail();
+  }, [id]);
+
+  if (isLoading) {
+    return <Loading />;
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+
   return (
     <div className="subWrap">
       <div className="inner">
@@ -33,8 +61,11 @@ const NoticeDetailPage = () => {
                 <tr>
                   <th>
                     <div className="detailTitleWrap">
-                      <div className="title">지인과의 관계 트러블</div>
-                      <div className="num">번호 561</div>
+                      <div className="title">{detail?.notice_title}</div>
+                      <div className="num">번호 {detail?.notice_id}</div>
+                      {detail?.update_date === today && (
+                        <span className="new"></span>
+                      )}
                     </div>
                   </th>
                 </tr>
@@ -43,24 +74,28 @@ const NoticeDetailPage = () => {
                 <tr>
                   <td>
                     <div className="detailInfo">
-                      <span className="name">작성자닉네임</span>
+                      <span className="name"></span>
                       <div className="info">
-                        <span className="date">2025-10-01</span>
-                        <span className="view">1136</span>
+                        <span className="date">{detail?.update_date}</span>
+                        <span className="view">조회 {detail?.view_count}</span>
                       </div>
                     </div>
                   </td>
                 </tr>
                 <tr>
                   <td className="tbl_btm_none">
-                    <div className="minheight100">{/* 내용 */}</div>
+                    <div className="minheight100">
+                      {detail?.notice_contents}
+                    </div>
                   </td>
                 </tr>
-                <tr>
+                {/* <tr>
                   <td className="padding0">
                     <div className="replyInfo">
-                      <span className="reply">2</span>
-                      <span className="favorite">4</span>
+                      <span className="reply">{detail?.comment_count}</span>
+                      <span className="favorite">
+                        {detail?.recommend_count}
+                      </span>
                     </div>
                     <div className="replyWrap">
                       <ul>
@@ -171,7 +206,7 @@ const NoticeDetailPage = () => {
                       <button>등록</button>
                     </div>
                   </td>
-                </tr>
+                </tr> */}
               </tbody>
             </table>
           </div>
@@ -180,32 +215,40 @@ const NoticeDetailPage = () => {
           <div className="tblComponent">
             <table>
               <colgroup>
-                <col />
-                <col />
-                <col />
+                <col width="15%" />
+                <col width="70%" />
                 <col />
               </colgroup>
               <tbody>
-                <tr>
-                  <td>이전글</td>
-                  <td>
-                    <Link href="">
-                      10.03(금) ~ 10.09(목) 추석 연휴 기간 고객센터 휴무 안내
-                    </Link>
-                  </td>
-                  <td>2025-10-01</td>
-                  <td>1136</td>
-                </tr>
-                <tr>
-                  <td>다음글</td>
-                  <td>
-                    <Link href="">
-                      10.03(금) ~ 10.09(목) 추석 연휴 기간 고객센터 휴무 안내
-                    </Link>
-                  </td>
-                  <td>2025-10-01</td>
-                  <td>1136</td>
-                </tr>
+                {(['prev', 'next'] as const).map((type) => {
+                  const isPrev = type === 'prev';
+                  const label = isPrev ? '이전글' : '다음글';
+
+                  // 0번, 1번 중 조건에 맞는 글 찾기
+                  const notice = Object.values(
+                    detail?.near_notice_list ?? {},
+                  ).find((n) => {
+                    if (!n) return false;
+                    if (isPrev) return n.notice_id < (detail?.notice_id ?? 0);
+                    return n.notice_id > (detail?.notice_id ?? 0);
+                  });
+
+                  return (
+                    <tr key={type}>
+                      <td>{label}</td>
+                      <td>
+                        {notice ? (
+                          <Link href={`/news/notice/${notice.notice_id}`}>
+                            {notice.notice_title}
+                          </Link>
+                        ) : (
+                          `${label}이 없습니다.`
+                        )}
+                      </td>
+                      <td>{notice?.create_date?.slice(0, 10) ?? ''}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -217,7 +260,6 @@ const NoticeDetailPage = () => {
             </Link>
             <button className="default">수정</button>
             <button className="default">삭제</button>
-            <button className="primary">글쓰기</button>
           </div>
         </div>
 

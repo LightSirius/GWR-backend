@@ -9,92 +9,81 @@ import {
   IconButton,
   Pagination,
   SegmentGroup,
+  Spinner,
 } from '@chakra-ui/react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
+import { useNoticeStore } from '@/app/store/useNoticeStore';
 
 const NoticePage = () => {
-  const items = [
-    {
-      id: 1,
-      kind: '점검',
-      title: '10.03(금) ~ 10.09(목) 추석 연휴 기간 고객센터 휴무 안내',
-      views: 100,
-      date: '2025-10-16',
-      comments: 3,
-    },
-    {
-      id: 2,
-      kind: '공지사항',
-      title: '10.03(금) ~ 10.09(목) 추석 연휴 기간 고객센터 휴무 안내',
-      views: 150,
-      date: '2024-01-02',
-      comments: 0,
-    },
-    {
-      id: 3,
-      kind: '점검',
-      title: '10.03(금) ~ 10.09(목) 추석 연휴 기간 고객센터 휴무 안내',
-      views: 200,
-      date: '2024-01-03',
-      comments: 1,
-    },
-    {
-      id: 4,
-      kind: '이벤트',
-      title: '10.03(금) ~ 10.09(목) 추석 연휴 기간 고객센터 휴무 안내',
-      views: 250,
-      date: '2024-01-04',
-      comments: 5,
-    },
-    {
-      id: 5,
-      kind: '패치',
-      title: '10.03(금) ~ 10.09(목) 추석 연휴 기간 고객센터 휴무 안내',
-      views: 300,
-      date: '2024-01-05',
-      comments: 2,
-    },
-    {
-      id: 6,
-      kind: '공지사항',
-      title: '서버 점검 안내 - 2024.01.06',
-      views: 350,
-      date: '2024-01-06',
-      comments: 0,
-    },
-    {
-      id: 7,
-      kind: '점검',
-      title: '점검 일정 변경 안내 - 2024.01-07',
-      views: 400,
-      date: '2024-01-07',
-      comments: 4,
-    },
-    {
-      id: 8,
-      kind: '이벤트',
-      title: '신규 이벤트 안내 - 2024.01.08',
-      views: 450,
-      date: '2024-01-08',
-      comments: 6,
-    },
-    {
-      id: 9,
-      kind: '패치',
-      title: '게임 패치 노트 - 2024.01.09',
-      views: 500,
-      date: '2024-01-09',
-      comments: 1,
-    },
-    {
-      id: 10,
-      kind: '공지사항',
-      title: '추가 공지사항 - 2024.01.10',
-      views: 550,
-      date: '2024-01-10',
-      comments: 0,
-    },
-  ];
+  // Zustand store 불러오기
+  const { notices, totalCount, search, isLoading } = useNoticeStore();
+
+  // 검색 / 필터 / 페이지 상태
+  const [noticeType, setNoticeType] = useState(0); // 0: 공지, 1: 점검, 2: 이벤트
+  const [sortType, setSortType] = useState(0); // 0: 최신순
+  const [searchType, setSearchType] = useState(0); // 0: 제목, 1: 내용
+  const [searchString, setSearchString] = useState('');
+  const [page, setPage] = useState(0);
+
+  // 페이지 로드 시 또는 필터 변경 시 API 호출
+  useEffect(() => {
+    const fetchNotices = async () => {
+      try {
+        const params: any = {
+          notice_type: noticeType,
+          search_page: page,
+          search_size: 10,
+          sort_type: sortType,
+        };
+
+        // 전체 탭이 아니면 notice_type 추가
+        if (noticeType !== 0) {
+          params.notice_type = noticeType;
+        }
+
+        // 검색어가 있으면 search_string, search_type 추가
+        if (searchString && searchString.trim() !== '') {
+          params.search_string = searchString;
+          params.search_type = searchType ?? 0;
+        }
+
+        await search(params);
+      } catch (err) {
+        console.error('공지 불러오기 실패:', err);
+      }
+    };
+
+    fetchNotices();
+  }, [noticeType, page, sortType]);
+
+  // 검색 버튼 클릭 시
+  const handleSearch = async () => {
+    setPage(0); // 첫 페이지로
+    const params: any = {
+      notice_type: noticeType,
+      search_page: 0,
+      search_size: 10,
+      sort_type: sortType,
+    };
+
+    if (searchString && searchString.trim() !== '') {
+      params.search_string = searchString;
+      params.search_type = searchType ?? 0;
+    }
+
+    await search(params);
+  };
+
+  // 탭 선택 시 noticeType 변경
+  const handleTabChange = (details: any) => {
+    const value = details?.value;
+    const map: Record<string, number> = {
+      공지사항: 0,
+      점검: 1,
+      이벤트: 2,
+    };
+    setNoticeType(map[value] ?? 0);
+  };
 
   return (
     <div className="subWrap">
@@ -106,68 +95,87 @@ const NoticePage = () => {
             titleUri="/news/notice"
           />
 
-          <SegmentGroup.Root defaultValue="전체" className="tabWrap">
+          {/* 탭 필터 */}
+          <SegmentGroup.Root
+            defaultValue="공지사항"
+            className="tabWrap"
+            onValueChange={handleTabChange}
+          >
             <SegmentGroup.Indicator />
-            <SegmentGroup.Items
-              items={['전체', '공지사항', '점검', '이벤트']}
-            />
+            <SegmentGroup.Items items={['공지사항', '점검', '이벤트']} />
           </SegmentGroup.Root>
 
-          {/* 테이블 */}
-          <div className="tblComponent">
-            <table>
-              <colgroup>
-                <col style={{ width: '5%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '65%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '10%' }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>번호</th>
-                  <th>분류</th>
-                  <th>제목</th>
-                  <th>조회</th>
-                  <th>날짜</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => {
-                  const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
-                  return (
-                    <tr key={item.id}>
-                      <td className="agnC">{item.id}</td>
-                      <td className="agnC">{item.kind}</td>
-                      <td>
-                        <Link
-                          href={`/news/notice/${item.id}`}
-                          className="title"
-                        >
-                          {item.title}
-                          {/* 오늘 올라온 글이면 NEW 표시 */}
-                          {item.date === today && <span className="new"></span>}
+          {/* ✅ 로딩 표시 */}
+          {isLoading && (
+            <div className="loadingArea">
+              <Spinner size="lg" />
+              <p>불러오는 중...</p>
+            </div>
+          )}
 
-                          {/* 댓글이 있으면 댓글 수 표시 */}
-                          {item.comments > 0 && (
-                            <span className="reply">{item.comments}</span>
-                          )}
-                        </Link>
+          {/* ✅ 테이블 */}
+          {!isLoading && (
+            <div className="tblComponent">
+              <table>
+                <colgroup>
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '65%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '10%' }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>번호</th>
+                    <th>분류</th>
+                    <th>제목</th>
+                    <th>조회</th>
+                    <th>날짜</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {notices.length > 0 ? (
+                    notices.map((item) => {
+                      const today = new Date().toISOString().split('T')[0];
+                      const date = item.create_date?.slice(0, 10);
+                      return (
+                        <tr key={item.notice_id}>
+                          <td className="agnC">{item.notice_id}</td>
+                          <td className="agnC">
+                            {['공지', '점검', '이벤트'][item.notice_type]}
+                          </td>
+                          <td>
+                            <Link
+                              href={`/news/notice/${item.notice_id}`}
+                              className="title"
+                            >
+                              {item.notice_title}
+                              {/* NEW 표시 */}
+                              {date === today && <span className="new"></span>}
+                              {/* 댓글 수 표시 */}
+                              {item.comment_count > 0 && (
+                                <span className="reply">
+                                  {item.comment_count}
+                                </span>
+                              )}
+                            </Link>
+                          </td>
+                          <td className="agnC">{item.view_count}</td>
+                          <td className="agnC">{date ?? '-'}</td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={5}>
+                        <div className="noData">등록된 게시물이 없습니다.</div>
                       </td>
-                      <td className="agnC">{item.views}</td>
-                      <td className="agnC">{item.date}</td>
                     </tr>
-                  );
-                })}
-                <tr>
-                  <td colSpan={5}>
-                    {/* 노데이터 */}
-                    <div className="noData">등록된 게시물이 없습니다.</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* 버튼그룹 */}
           <div className="btnWrap right">
@@ -176,12 +184,13 @@ const NoticePage = () => {
             </Link>
           </div>
 
-          {/* 페이지네이션 */}
+          {/* ✅ 페이지네이션 */}
           <Pagination.Root
-            count={20}
-            pageSize={2}
-            defaultPage={1}
+            count={totalCount}
+            pageSize={10}
+            page={page + 1}
             className="pagination"
+            onPageChange={(e) => setPage(e.page - 1)}
           >
             <ButtonGroup variant="ghost" size="sm">
               <Pagination.PrevTrigger asChild>
@@ -192,7 +201,10 @@ const NoticePage = () => {
 
               <Pagination.Items
                 render={(page) => (
-                  <IconButton variant={{ base: 'ghost', _selected: 'outline' }}>
+                  <IconButton
+                    key={page.value}
+                    variant={{ base: 'ghost', _selected: 'outline' }}
+                  >
                     {page.value}
                   </IconButton>
                 )}
@@ -206,18 +218,29 @@ const NoticePage = () => {
             </ButtonGroup>
           </Pagination.Root>
 
-          {/* 검색 */}
+          {/* ✅ 검색 */}
           <div className="searchArea">
-            <select name="" id="">
-              <option value="">최신순</option>
-              <option value="">정확도순</option>
+            <select
+              value={sortType}
+              onChange={(e) => setSortType(Number(e.target.value))}
+            >
+              <option value={0}>최신순</option>
+              <option value={1}>정확도순</option>
             </select>
-            <select name="" id="">
-              <option value="">제목</option>
-              <option value="">내용</option>
+            <select
+              value={searchType}
+              onChange={(e) => setSearchType(Number(e.target.value))}
+            >
+              <option value={0}>제목</option>
+              <option value={1}>내용</option>
             </select>
-            <input type="text" />
-            <button>검색</button>
+            <input
+              type="text"
+              value={searchString}
+              onChange={(e) => setSearchString(e.target.value)}
+              placeholder="검색어를 입력하세요"
+            />
+            <button onClick={handleSearch}>검색</button>
           </div>
         </div>
 
