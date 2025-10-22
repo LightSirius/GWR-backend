@@ -1,51 +1,73 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/layout/Loading';
 import SubPageLogin from '@/components/layout/SubPageLogin';
 import SubPageTitle from '@/components/layout/SubPageTitle';
 import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
-
-interface WritePostData {
-  board_title: string;
-  board_contents: string;
-  board_contents_es: string;
-}
+import { NoticeInsert, useNoticeStore } from '@/app/store/useNoticeStore';
+import { Checkbox, NativeSelect } from '@chakra-ui/react';
 
 const NoticeWritePage = () => {
   const router = useRouter();
   const { isAuthenticated, isLoading, accessToken } = useAuth();
-  const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [isDaytime, setIsDaytime] = useState<boolean | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<WritePostData>({
-    board_title: '',
-    board_contents: '',
-    board_contents_es: '',
+  const { insert, update, selectedNotice, setSelectedNotice } =
+    useNoticeStore();
+
+  const searchParams = useSearchParams();
+  const boardId = searchParams.get('id'); // 수정할 id
+  const editorRef = useRef<any>(null); // 에디터 ref
+
+  useEffect(() => {
+    // 새 글쓰기라면 초기화
+    if (!boardId) {
+      // id 쿼리가 없으면 새 글쓰기
+      setSelectedNotice(undefined);
+    }
+  }, [boardId]);
+
+  const [formData, setFormData] = useState<NoticeInsert>({
+    notice_type: 0,
+    notice_title: '',
+    notice_contents: '',
+    notice_contents_es: '',
+    notice_fix: false,
+    info_delete: false,
   });
-  const editorRef = useRef<any>(null);
-  const handleSave = () => {
-    const html = editorRef.current?.getHTML();
-    const text = editorRef.current?.getText();
 
-    console.log('HTML 내용:', html);
-    console.log('텍스트 내용:', text);
-  };
+  useEffect(() => {
+    if (selectedNotice) {
+      setFormData({
+        notice_type: selectedNotice.notice_type,
+        notice_title: selectedNotice.notice_title,
+        notice_contents: selectedNotice.notice_contents,
+        notice_contents_es: selectedNotice.notice_contents_es ?? '',
+        notice_fix: selectedNotice.notice_fix ?? false,
+        info_delete: false,
+      });
+    } else {
+      setFormData({
+        notice_type: 0,
+        notice_title: '',
+        notice_contents: '',
+        notice_contents_es: '',
+        notice_fix: false,
+        info_delete: false,
+      });
 
-  // HTML 태그를 제거하고 순수 텍스트만 추출하는 함수
-  const stripHtmlTags = (html: string): string => {
-    return html
-      .replace(/<[^>]*>/g, '') // HTML 태그 제거
-      .replace(/&nbsp;/g, ' ') // &nbsp;를 공백으로 변환
-      .replace(/&amp;/g, '&') // &amp;를 &로 변환
-      .replace(/&lt;/g, '<') // &lt;를 <로 변환
-      .replace(/&gt;/g, '>') // &gt;를 >로 변환
-      .replace(/&quot;/g, '"') // &quot;를 "로 변환
-      .replace(/\s+/g, ' ') // 연속된 공백을 하나로
-      .trim(); // 앞뒤 공백 제거
+      editorRef.current?.clear();
+    }
+  }, [selectedNotice]);
+
+  // 필드 변경시
+  const handleChange = (key: keyof NoticeInsert, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
   // 로그인 상태 확인 및 접근 제어
@@ -61,107 +83,97 @@ const NoticeWritePage = () => {
     return <Loading />;
   }
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  // 저장
+  const handleSave = () => {
+    if (!editorRef.current) return;
+    const editorHtml = editorRef.current?.getHTML() ?? '';
+    const editorText = editorRef.current?.getText() ?? '';
 
-    // board_contents와 board_contents_es를 동기화
-    if (name === 'board_contents') {
-      setFormData((prev) => ({
-        ...prev,
-        board_contents: value,
-        board_contents_es: value,
-      }));
-    }
+    const newData = {
+      ...formData,
+      notice_contents: editorHtml,
+      notice_contents_es: editorText,
+      ...(boardId ? { notice_id: Number(boardId) } : {}), // boardId가 있으면 notice_id 추가
+    };
+
+    setFormData(newData);
+
+    // 검증
+    if (!handleValidate(newData)) return;
+
+    // 저장
+    handleSubmit(newData);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.board_title.trim()) {
-      alert('제목을 입력해주세요.');
-      return;
-    }
-
-    if (!formData.board_contents.trim()) {
-      alert('내용을 입력해주세요.');
-      return;
-    }
-
+  // 검증
+  const handleValidate = (newData: any): boolean => {
     if (!accessToken) {
       alert('로그인이 필요합니다. 다시 로그인해주세요.');
       router.push('/login');
-      return;
+      return false; // 실패
     }
 
-    setIsSubmitting(true);
+    if (!newData.notice_title.trim()) {
+      alert('제목을 입력해주세요.');
+      return false; // 실패
+    }
+
+    if (!newData.notice_contents.trim()) {
+      alert('내용을 입력해주세요.');
+      return false; // 실패
+    }
+
+    return true; // 통과
+  };
+
+  const handleSubmit = async (newData: any) => {
+    // console.log('데이터', newData);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/board/insert`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`, // JWT 토큰 필요
-          },
-          body: JSON.stringify({
-            board_type: 0, // 자유게시판
-            board_category: 0,
-            board_title: formData.board_title.trim(),
-            board_contents: formData.board_contents.trim(),
-            board_contents_es: stripHtmlTags(formData.board_contents), // HTML 태그 제거된 순수 텍스트
-          }),
-        },
-      );
+      let result: any;
 
-      if (response.status === 401) {
-        alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
-        router.push('/login');
-        return;
+      if (boardId) {
+        // 수정
+        result = await update(newData);
+      } else {
+        // 등록
+        result = await insert(newData);
       }
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(
-          `게시글 작성 실패: ${response.status} ${response.statusText}\n${errorData}`,
-        );
-      }
-
-      const result = await response.json();
-
-      console.log('게시글 작성 응답:', result); // 디버깅용 로그 추가
 
       // status가 0(success)이거나 'success'일 때 성공으로 처리
       if (result.status === 0 || result.status === 'success') {
-        // 성공 시 알림 없이 바로 해당 게시글로 이동
-        router.push(`/community/free/${result.board_id}`);
+        let message = boardId
+          ? '게시글 수정에 성공했습니다.'
+          : '게시글 등록에 성공했습니다.';
+
+        alert(message);
+        // 성공 시 해당 게시글로 이동
+        router.push(`/news/notice/${result.notice_id}`);
       } else {
         // 실패 시 구체적인 에러 메시지 표시
-        let errorMessage = '게시글 작성 실패';
+        let errorMessage = boardId
+          ? '공지사항 수정 실패'
+          : '공지사항 등록 실패';
+
         if (result.status === 1) {
           errorMessage = 'CUID가 설정되지 않았습니다.';
         } else if (result.status === 2) {
-          errorMessage = '게시글 작성에 실패했습니다.';
+          errorMessage = boardId
+            ? '공지사항 수정에 실패했습니다.'
+            : '공지사항 등록에 실패했습니다.';
         } else if (result.status === 3) {
           errorMessage = '시스템 오류가 발생했습니다.';
         }
-        throw new Error(errorMessage);
+
+        alert(errorMessage);
       }
     } catch (error) {
-      console.error('게시글 작성 오류:', error);
+      console.error('공지사항 처리 오류:', error);
       alert(
         error instanceof Error
           ? error.message
-          : '게시글 작성 중 오류가 발생했습니다.',
+          : '공지사항 처리 중 오류가 발생했습니다.',
       );
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -174,7 +186,6 @@ const NoticeWritePage = () => {
             firstDepth="새소식"
             titleUri="/news/notice"
           />
-
           {/* 테이블 */}
           <div className="tblComponent write">
             <table>
@@ -185,7 +196,42 @@ const NoticeWritePage = () => {
                 <tr>
                   <th>
                     <div className="title">
-                      <input type="text" placeholder="제목을 입력하세요." />
+                      <NativeSelect.Root size="sm" width="120px">
+                        <NativeSelect.Field
+                          value={formData.notice_type}
+                          onChange={(e) => {
+                            handleChange('notice_type', Number(e.target.value));
+                          }}
+                        >
+                          <option value={1}>공지</option>
+                          <option value={2}>점검</option>
+                          <option value={3}>이벤트</option>
+                        </NativeSelect.Field>
+                        <NativeSelect.Indicator />
+                      </NativeSelect.Root>
+                      <input
+                        type="text"
+                        placeholder="제목을 입력하세요."
+                        value={formData.notice_title}
+                        onChange={(e) => {
+                          handleChange('notice_title', e.target.value);
+                        }}
+                      />
+                      {/* 
+                      <Checkbox.Root
+                        variant="outline"
+                        width="120px"
+                        checked={formData.notice_fix || false}
+                        onCheckedChange={(e) => {
+                          handleChange('notice_fix', e.checked);
+                        }}
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        <Checkbox.Label>상단 고정</Checkbox.Label>
+                      </Checkbox.Root> */}
                     </div>
                   </th>
                 </tr>
@@ -194,7 +240,10 @@ const NoticeWritePage = () => {
                 <tr>
                   <td className="text">
                     <div className="minheight100 text">
-                      <SimpleEditor ref={editorRef} />
+                      <SimpleEditor
+                        ref={editorRef}
+                        initialContent={selectedNotice?.notice_contents || ''}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -207,7 +256,6 @@ const NoticeWritePage = () => {
             <Link href="/news/notice" className="default">
               목록
             </Link>
-            <button className="default">취소</button>
             <button className="primary" onClick={handleSave}>
               등록
             </button>

@@ -135,7 +135,7 @@ const NoticePage = () => {
                 </thead>
                 <tbody>
                   {notices.length > 0 ? (
-                    notices.map((item) => {
+                    notices.map((item: any) => {
                       const today = new Date().toISOString().split('T')[0];
                       const date = item.create_date?.slice(0, 10);
                       return (

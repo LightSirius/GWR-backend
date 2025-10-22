@@ -789,8 +789,10 @@ footer {
 .minheight100 {
   min-height: 100px !important;
 }
+
 // 서브페이지
 .subWrap {
+  min-height: calc(100vh - 152px);
   .inner {
     display: flex;
     justify-content: space-between;
@@ -1193,7 +1195,18 @@ footer {
   // write
   &.write {
     & .title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       padding: 0 10px;
+      & .chakra-native-select__root {
+        height: 42.5px;
+        & select {
+          height: 100%;
+          background-color: #fff;
+          border-color: #fff;
+        }
+      }
       & input {
         display: flex;
         width: 100%;
@@ -1377,6 +1390,8 @@ footer {
         background-color: #2c2f6c;
       }
     }
+  }
+  & .chakra-button {
   }
 }
 

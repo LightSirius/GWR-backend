@@ -2,15 +2,20 @@
 import { create } from 'zustand';
 import { apiFetch } from './api';
 
-// 공지 등록용 타입
+// 공지 등록/수정용 타입
 export interface NoticeInsert {
-  id: number;
-  notice_type: number; // 공지 유형 (0: 공지, 1: 점검, 2: 이벤트, 3: 패치 등)
+  notice_id?: number;
+  notice_type: number; // 공지 유형 (0: 공지, 1: 점검, 2: 이벤트 등)
   notice_title: string; // 공지 제목
   notice_contents: string; // 공지 내용
   notice_contents_es?: string; // 엘라스틱 서치용 (선택)
   notice_thumbnail?: string; // 공지 썸네일 URL (선택)
+  info_delete: boolean;
   notice_fix?: boolean; // 공지 고정 여부 (true: 상단 고정)
+}
+// 공지 삭제용 타입
+export interface NoticeDelete {
+  notice_id?: number;
 }
 
 // 공지 검색 요청용 타입
@@ -63,21 +68,49 @@ export interface NoticeDetail {
 
 // Zustand 상태 인터페이스 (정리)
 interface NoticeState {
-  notices: NoticeSummary[]; // 현재 공지 목록
+  notices: NoticeSummary[];
   totalCount: number; // 전체 개수
   isLoading: boolean; // 로딩 상태
+  selectedNotice?: NoticeInsert;
+  setSelectedNotice: (notice?: NoticeInsert) => void;
+  paging: {
+    curPage: number;
+    pageRowCount: number;
+  };
+  setPaging: (
+    pageObject: Partial<{ curPage: number; pageRowCount: number }>,
+  ) => void;
 
   search: (params: NoticeSearch) => Promise<NoticeSummary[]>; // 공지 검색
   insert: (notice: NoticeInsert) => Promise<any>; // 공지 추가 (서버 응답 그대로 반환)
   getDetail: (notice_id: number) => Promise<NoticeDetail>;
-  update: (id: number, updated: Partial<NoticeSummary>) => Promise<any>; // 공지 수정
-  delete: (id: number) => Promise<any>; // 공지 삭제
+  update: (notice: NoticeInsert) => Promise<any>; // 공지 수정
+  noticeDelete: (notice: NoticeDelete) => Promise<any>; // 공지 삭제
 }
 
 export const useNoticeStore = create<NoticeState>((set, get) => ({
   notices: [],
   totalCount: 0,
   isLoading: false,
+
+  // 페이징 상태
+  paging: {
+    curPage: 1,
+    pageRowCount: 999999,
+  },
+  setPaging: (pageObject) =>
+    set((state) => ({
+      paging: {
+        ...state.paging,
+        ...pageObject,
+      },
+    })),
+
+  selectedNotice: undefined,
+  setSelectedNotice: (notice) =>
+    set(() => ({
+      selectedNotice: notice,
+    })),
 
   // 공지 검색
   search: async (params: NoticeSearch): Promise<NoticeSummary[]> => {
@@ -148,28 +181,26 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
   },
 
   // 공지 수정
-  update: async (id: number, updated: Partial<NoticeSummary>): Promise<any> => {
-    set({ isLoading: true });
-    try {
-      // 낙관적 업데이트: UI 반영
-      set((state) => ({
-        notices: state.notices.map((n) =>
-          n.notice_id === id ? { ...n, ...updated } : n,
-        ),
-      }));
+  update: async (notice: NoticeInsert): Promise<any> => {
+    if (!notice.notice_id) {
+      throw new Error();
+    }
 
+    set({ isLoading: true });
+
+    try {
       // 서버 요청
-      const data = await apiFetch(`/notice/${id}`, {
-        method: 'PUT',
+      const data = await apiFetch(`/notice/update`, {
+        method: 'POST',
         useAuth: true,
-        body: JSON.stringify(updated),
+        body: JSON.stringify(notice),
       });
 
-      // 서버가 수정된 데이터(또는 일부)를 반환하면 이를 다시 반영
+      // 서버가 수정된 데이터(또는 일부)를 반환하면 상태 업데이트
       if (data && typeof data === 'object') {
         set((state) => ({
           notices: state.notices.map((n) =>
-            n.notice_id === id ? { ...n, ...data } : n,
+            n.notice_id === notice.notice_id ? { ...n, ...data } : n,
           ),
         }));
       }
@@ -184,22 +215,34 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
   },
 
   // 공지 삭제
-  delete: async (id: number): Promise<any> => {
+  noticeDelete: async (notice: NoticeDelete): Promise<any> => {
     set({ isLoading: true });
-    try {
-      // 낙관적 삭제: UI 반영
-      set((state) => ({
-        notices: state.notices.filter((n) => n.notice_id !== id),
-      }));
+    if (!notice.notice_id) {
+      throw new Error();
+    }
 
-      const data = await apiFetch(`/notice/${id}`, {
-        method: 'DELETE',
+    set({ isLoading: true });
+
+    try {
+      // 서버 요청
+      const data = await apiFetch(`/notice/delete`, {
+        method: 'POST',
         useAuth: true,
+        body: JSON.stringify(notice),
       });
+
+      // 서버가 수정된 데이터(또는 일부)를 반환하면 상태 업데이트
+      if (data && typeof data === 'object') {
+        set((state) => ({
+          notices: state.notices.map((n) =>
+            n.notice_id === notice.notice_id ? { ...n, ...data } : n,
+          ),
+        }));
+      }
 
       return data;
     } catch (err) {
-      console.error('공지 삭제 실패:', err);
+      console.error('삭제 실패:', err);
       throw err;
     } finally {
       set({ isLoading: false });

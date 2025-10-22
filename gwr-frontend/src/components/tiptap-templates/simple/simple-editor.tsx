@@ -190,7 +190,20 @@ const MobileToolbarContent = ({
   </>
 );
 
-export const SimpleEditor = React.forwardRef((props, ref) => {
+interface SimpleEditorProps {
+  initialContent?: string;
+}
+
+export interface SimpleEditorRef {
+  getHTML: () => string;
+  getText: () => string;
+  clear: () => void;
+}
+
+export const SimpleEditor = React.forwardRef<
+  SimpleEditorRef,
+  SimpleEditorProps
+>((props, ref) => {
   const isMobile = useIsMobile();
   const { height } = useWindowSize();
   const [mobileView, setMobileView] = React.useState<
@@ -201,6 +214,7 @@ export const SimpleEditor = React.forwardRef((props, ref) => {
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
+    content: props.initialContent ?? '',
     editorProps: {
       attributes: {
         autocomplete: 'off',
