@@ -76,7 +76,7 @@ const NoticeWritePage = () => {
       alert('로그인이 필요한 서비스입니다.');
       router.push('/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, router]);
 
   // 로딩 중이거나 로그인하지 않은 경우 로딩 화면 표시
   if (isLoading || !isAuthenticated) {
@@ -151,16 +151,14 @@ const NoticeWritePage = () => {
         router.push(`/news/notice/${result.notice_id}`);
       } else {
         // 실패 시 구체적인 에러 메시지 표시
-        let errorMessage = boardId
-          ? '공지사항 수정 실패'
-          : '공지사항 등록 실패';
+        let errorMessage = boardId ? '게시글 수정 실패' : '게시글 등록 실패';
 
         if (result.status === 1) {
           errorMessage = 'CUID가 설정되지 않았습니다.';
         } else if (result.status === 2) {
           errorMessage = boardId
-            ? '공지사항 수정에 실패했습니다.'
-            : '공지사항 등록에 실패했습니다.';
+            ? '게시글 수정에 실패했습니다.'
+            : '게시글 등록에 실패했습니다.';
         } else if (result.status === 3) {
           errorMessage = '시스템 오류가 발생했습니다.';
         }
@@ -168,11 +166,11 @@ const NoticeWritePage = () => {
         alert(errorMessage);
       }
     } catch (error) {
-      console.error('공지사항 처리 오류:', error);
+      console.error('게시글 처리 오류:', error);
       alert(
         error instanceof Error
           ? error.message
-          : '공지사항 처리 중 오류가 발생했습니다.',
+          : '게시글 처리 중 오류가 발생했습니다.',
       );
     }
   };
@@ -203,9 +201,9 @@ const NoticeWritePage = () => {
                             handleChange('notice_type', Number(e.target.value));
                           }}
                         >
-                          <option value={1}>공지</option>
-                          <option value={2}>점검</option>
-                          <option value={3}>이벤트</option>
+                          <option value={0}>공지</option>
+                          <option value={1}>점검</option>
+                          <option value={2}>이벤트</option>
                         </NativeSelect.Field>
                         <NativeSelect.Indicator />
                       </NativeSelect.Root>

@@ -13,17 +13,20 @@ import {
 } from '@chakra-ui/react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { useNoticeStore } from '@/app/store/useNoticeStore';
+import { useAuth } from '@/contexts/AuthContext';
 
 const NoticePage = () => {
   // Zustand store 불러오기
-  const { notices, totalCount, search, isLoading } = useNoticeStore();
+  const { notices, totalCount, search, isLoading, paging, setPaging } =
+    useNoticeStore();
+  // Auth
+  const { isAuthenticated, accessToken } = useAuth();
 
   // 검색 / 필터 / 페이지 상태
   const [noticeType, setNoticeType] = useState(0); // 0: 공지, 1: 점검, 2: 이벤트
   const [sortType, setSortType] = useState(0); // 0: 최신순
   const [searchType, setSearchType] = useState(0); // 0: 제목, 1: 내용
   const [searchString, setSearchString] = useState('');
-  const [page, setPage] = useState(0);
 
   // 페이지 로드 시 또는 필터 변경 시 API 호출
   useEffect(() => {
@@ -31,8 +34,8 @@ const NoticePage = () => {
       try {
         const params: any = {
           notice_type: noticeType,
-          search_page: page,
-          search_size: 10,
+          search_page: paging.curPage,
+          search_size: paging.pageRowCount,
           sort_type: sortType,
         };
 
@@ -54,14 +57,14 @@ const NoticePage = () => {
     };
 
     fetchNotices();
-  }, [noticeType, page, sortType]);
+  }, [noticeType, paging, sortType]);
 
   // 검색 버튼 클릭 시
   const handleSearch = async () => {
-    setPage(0); // 첫 페이지로
+    setPaging(paging); // 첫 페이지로
     const params: any = {
       notice_type: noticeType,
-      search_page: 0,
+      search_page: 1,
       search_size: 10,
       sort_type: sortType,
     };
@@ -178,19 +181,23 @@ const NoticePage = () => {
           )}
 
           {/* 버튼그룹 */}
-          <div className="btnWrap right">
-            <Link href="/news/notice/write" className="primary">
-              글쓰기
-            </Link>
-          </div>
+          {isAuthenticated ? (
+            <div className="btnWrap right">
+              <Link href="/news/notice/write" className="primary">
+                글쓰기
+              </Link>
+            </div>
+          ) : (
+            ''
+          )}
 
           {/* ✅ 페이지네이션 */}
           <Pagination.Root
             count={totalCount}
             pageSize={10}
-            page={page + 1}
+            page={paging.curPage}
             className="pagination"
-            onPageChange={(e) => setPage(e.page - 1)}
+            onPageChange={(e) => setPaging({ curPage: e.page })}
           >
             <ButtonGroup variant="ghost" size="sm">
               <Pagination.PrevTrigger asChild>
@@ -239,6 +246,11 @@ const NoticePage = () => {
               value={searchString}
               onChange={(e) => setSearchString(e.target.value)}
               placeholder="검색어를 입력하세요"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
             />
             <button onClick={handleSearch}>검색</button>
           </div>

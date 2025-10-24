@@ -31,7 +31,6 @@ const NoticeDetailPage = () => {
 
   useEffect(() => {
     if (detail) {
-      console.log('공지 상세 불러오기 성공:', detail);
       setSelectedNotice({
         notice_type: Number(detail?.notice_type) ?? 0,
         notice_title: detail?.notice_title ?? '',
@@ -59,7 +58,6 @@ const NoticeDetailPage = () => {
     const deleteData = {
       notice_id: Number(id),
     };
-    console.log('게시글아이디', id);
 
     try {
       let result: any;
@@ -94,7 +92,6 @@ const NoticeDetailPage = () => {
     }
 
     // 실제 삭제 로직
-    console.log('삭제 실행!');
     setIsOpen(false);
   };
 
@@ -154,124 +151,6 @@ const NoticeDetailPage = () => {
                     </div>
                   </td>
                 </tr>
-                {/* <tr>
-                  <td className="padding0">
-                    <div className="replyInfo">
-                      <span className="reply">{detail?.comment_count}</span>
-                      <span className="favorite">
-                        {detail?.recommend_count}
-                      </span>
-                    </div>
-                    <div className="replyWrap">
-                      <ul>
-                        <li>
-                          <div>
-                            <div className="userInfo">
-                              <strong>닉네임</strong>
-                              <span className="time">2025-10-01 09:49:12</span>
-                              <div className="btnWrap">
-                                <button>답글</button>
-                                <button>수정</button>
-                                <button>삭제</button>
-                              </div>
-                            </div>
-                            <div className="text">댓글내용</div>
-                          </div>
-                          <ul>
-                            <li>
-                              <div>
-                                <div className="userInfo">
-                                  <strong>닉네임</strong>
-                                  <span className="time">
-                                    2025-10-01 09:49:12
-                                  </span>
-                                  <div className="btnWrap">
-                                    <button>수정</button>
-                                    <button>삭제</button>
-                                  </div>
-                                </div>
-                                <div className="text">댓글내용</div>
-                              </div>
-                            </li>
-                            <li>
-                              <div>
-                                <div className="userInfo">
-                                  <strong>닉네임</strong>
-                                  <span className="time">
-                                    2025-10-01 09:49:12
-                                  </span>
-                                  <div className="btnWrap">
-                                    <button>수정</button>
-                                    <button>삭제</button>
-                                  </div>
-                                </div>
-                                <div className="text">댓글내용</div>
-                              </div>
-                            </li>
-                            <li>
-                              <div>
-                                <div className="userInfo">
-                                  <strong>닉네임</strong>
-                                  <span className="time">
-                                    2025-10-01 09:49:12
-                                  </span>
-                                  <div className="btnWrap">
-                                    <button>수정</button>
-                                    <button>삭제</button>
-                                  </div>
-                                </div>
-                                <div className="text">댓글내용</div>
-                              </div>
-                            </li>
-                          </ul>
-                        </li>
-                      </ul>
-                    </div>
-                    <div className="replyWrap">
-                      <ul>
-                        <li>
-                          <div>
-                            <div className="userInfo">
-                              <strong>닉네임</strong>
-                              <span className="time">2025-10-01 09:49:12</span>
-                              <div className="btnWrap">
-                                <button>답글</button>
-                                <button>수정</button>
-                                <button>삭제</button>
-                              </div>
-                            </div>
-                            <div className="text">댓글내용</div>
-                          </div>
-                          <ul>
-                            <li>
-                              <div>
-                                <div className="userInfo">
-                                  <strong>닉네임</strong>
-                                  <span className="time">
-                                    2025-10-01 09:49:12
-                                  </span>
-                                  <div className="btnWrap">
-                                    <button>수정</button>
-                                    <button>삭제</button>
-                                  </div>
-                                </div>
-                                <div className="text">댓글내용</div>
-                              </div>
-                            </li>
-                          </ul>
-                        </li>
-                      </ul>
-                    </div>
-                    <div className="replyWrite">
-                      <textarea
-                        name=""
-                        id=""
-                        placeholder="로그인 하신 후 댓글을 작성하실 수 있습니다."
-                      ></textarea>
-                      <button>등록</button>
-                    </div>
-                  </td>
-                </tr> */}
               </tbody>
             </table>
           </div>

@@ -96,7 +96,7 @@ export const useNoticeStore = create<NoticeState>((set, get) => ({
   // 페이징 상태
   paging: {
     curPage: 1,
-    pageRowCount: 999999,
+    pageRowCount: 10,
   },
   setPaging: (pageObject) =>
     set((state) => ({

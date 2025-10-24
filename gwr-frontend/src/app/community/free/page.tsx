@@ -12,118 +12,48 @@ import {
 } from '@chakra-ui/react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface Post {
-  board_id: number;
-  board_title: string;
-  user_name: string;
-  info_delete: boolean;
-  info_block: boolean;
-  create_date: Date;
-  comment_count: number;
-  view_count: number;
-  recommend_count: number;
-}
-
-interface BoardSearchParams {
-  board_type: number;
-  board_category: number;
-  search_page: number;
-  search_string?: string;
-  search_type?: number;
-  search_size: number;
-  sort_type: number;
-}
-
-interface BoardSearchResponse {
-  total_count: number;
-  board_summary: Post[];
-}
+import { useBoardStore } from '@/app/store/useBoardStore';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/app/store/api';
 
 const FreeBoardPage = () => {
   const { isAuthenticated } = useAuth();
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [totalPosts, setTotalPosts] = useState(0);
   const [searchType, setSearchType] = useState<number>(0); // 0: 제목, 1: 내용, 2: 작성자
   const [sortType, setSortType] = useState<number>(0); // 0: 최신순, 1: 점수순
+  const [searchString, setSearchString] = useState(''); // 검색어
 
-  const fetchPosts = async (params: BoardSearchParams) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/board/search`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(params),
-        },
-      );
+  const { posts, isLoading, totalCount, paging, setPaging, search } =
+    useBoardStore();
 
-      if (!response.ok) throw new Error('게시글을 불러오는데 실패했습니다.');
-
-      const data: BoardSearchResponse = await response.json();
-      setPosts(data.board_summary);
-      setTotalPosts(data.total_count || 0);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSearch = () => {
-    const searchParams: BoardSearchParams = {
-      board_type: 0,
-      board_category: 0,
-      search_page: 1,
-      search_size: 10,
-      sort_type: sortType,
-    };
-
-    if (searchTerm.trim()) {
-      searchParams.search_string = searchTerm.trim();
-      searchParams.search_type = searchType;
-    }
-
-    setCurrentPage(1);
-    fetchPosts(searchParams);
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    const searchParams: BoardSearchParams = {
-      board_type: 0,
-      board_category: 0,
-      search_page: page,
-      search_size: 10,
-      sort_type: sortType,
-    };
-
-    if (searchTerm.trim()) {
-      searchParams.search_string = searchTerm.trim();
-      searchParams.search_type = searchType;
-    }
-
-    fetchPosts(searchParams);
-  };
-
+  // 페이지 로드시 fatch
   useEffect(() => {
-    const searchParams: BoardSearchParams = {
+    search({
+      board_type: 0,
+      board_category: 0,
+      search_page: paging.curPage,
+      search_size: paging.pageRowCount,
+      sort_type: 0,
+    });
+  }, [paging.curPage]);
+
+  // 검색 버튼 동작
+  const handleSearch = async () => {
+    setPaging({ curPage: 1 }); // 첫 페이지로
+    const params: any = {
       board_type: 0,
       board_category: 0,
       search_page: 1,
       search_size: 10,
-      sort_type: 0,
+      sort_type: sortType,
     };
-    fetchPosts(searchParams);
-  }, []);
 
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(totalPosts / itemsPerPage);
+    if (searchString && searchString.trim() !== '') {
+      params.search_string = searchString;
+      params.search_type = searchType ?? 0;
+    }
+
+    await search(params);
+  };
 
   return (
     <div className="subWrap">
@@ -218,40 +148,38 @@ const FreeBoardPage = () => {
           )}
 
           {/* 페이지네이션 */}
-          {totalPages > 1 && (
-            <Pagination.Root
-              count={totalPosts}
-              pageSize={itemsPerPage}
-              page={currentPage}
-              onPageChange={(e) => handlePageChange(e.page)}
-              className="pagination"
-            >
-              <ButtonGroup variant="ghost" size="sm">
-                <Pagination.PrevTrigger asChild>
-                  <IconButton>
-                    <LuChevronLeft />
-                  </IconButton>
-                </Pagination.PrevTrigger>
+          <Pagination.Root
+            count={totalCount}
+            pageSize={paging.pageRowCount}
+            page={paging.curPage}
+            onPageChange={(e) => setPaging({ curPage: e.page })}
+            className="pagination"
+          >
+            <ButtonGroup variant="ghost" size="sm">
+              <Pagination.PrevTrigger asChild>
+                <IconButton>
+                  <LuChevronLeft />
+                </IconButton>
+              </Pagination.PrevTrigger>
 
-                <Pagination.Items
-                  render={(page) => (
-                    <IconButton
-                      variant={{ base: 'ghost', _selected: 'outline' }}
-                      key={page.value}
-                    >
-                      {page.value}
-                    </IconButton>
-                  )}
-                />
-
-                <Pagination.NextTrigger asChild>
-                  <IconButton>
-                    <LuChevronRight />
+              <Pagination.Items
+                render={(page) => (
+                  <IconButton
+                    variant={{ base: 'ghost', _selected: 'outline' }}
+                    key={page.value}
+                  >
+                    {page.value}
                   </IconButton>
-                </Pagination.NextTrigger>
-              </ButtonGroup>
-            </Pagination.Root>
-          )}
+                )}
+              />
+
+              <Pagination.NextTrigger asChild>
+                <IconButton>
+                  <LuChevronRight />
+                </IconButton>
+              </Pagination.NextTrigger>
+            </ButtonGroup>
+          </Pagination.Root>
 
           {/* 검색영역 */}
           <div className="searchArea">
@@ -272,9 +200,14 @@ const FreeBoardPage = () => {
             </select>
             <input
               type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              value={searchString}
+              onChange={(e) => setSearchString(e.target.value)}
+              placeholder="검색어를 입력하세요"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
             />
             <button onClick={handleSearch}>검색</button>
           </div>

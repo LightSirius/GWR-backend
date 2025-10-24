@@ -1046,6 +1046,7 @@ footer {
       }
     }
     & .replyWrap {
+      border-top: 1px solid #ddd;
       & > ul {
         & > li {
           & .userInfo {
@@ -1084,13 +1085,13 @@ footer {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            border-top: 1px solid #ddd;
+            // border-top: 1px solid #ddd;
             border-bottom: 1px solid #ddd;
             padding: 15px 15px 20px;
             box-sizing: border-box;
           }
           // 대댓글
-          & > ul {
+          & ul.rereply {
             & > li {
               & > div {
                 display: flex;
@@ -1171,6 +1172,10 @@ footer {
         padding: 10px;
         resize: none;
         height: 90px;
+        &:disabled {
+          background-color: #f9f9f9;
+          cursor: no-drop;
+        }
       }
       & button {
         display: flex;
@@ -1185,6 +1190,11 @@ footer {
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
+
+        &:disabled {
+          background-color: rgba(0, 0, 0, 0.1);
+          cursor: no-drop;
+        }
       }
     }
   }
