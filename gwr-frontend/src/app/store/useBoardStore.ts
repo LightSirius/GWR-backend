@@ -128,10 +128,16 @@ interface BoardState {
     page: number,
   ) => Promise<CommentListResponse>;
   // 코멘트 등록
-  writeComment: (
+  insertComment: (
     board_id: number,
     comment_contents: string,
     comment_reply_id?: number,
+  ) => Promise<any>;
+  // 코멘트 수정
+  updateComment: (
+    board_id: number,
+    comment_contents: string,
+    comment_id: number,
   ) => Promise<any>;
 }
 
@@ -297,7 +303,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
-  writeComment: async (
+  insertComment: async (
     board_id: number,
     comment_contents: string,
     comment_reply_id = 0,
@@ -311,6 +317,35 @@ export const useBoardStore = create<BoardState>((set, get) => ({
           board_id,
           comment_contents,
           comment_reply_id, // 대댓글이면 부모 comment_id, 일반 댓글이면 0
+        }),
+      });
+
+      // 성공 시 목록 새로고침
+      const { getCommentList } = get();
+      await getCommentList(board_id, 1);
+      return response;
+    } catch (err) {
+      console.error('댓글 등록 실패:', err);
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  updateComment: async (
+    board_id: number,
+    comment_contents: string,
+    comment_id: number,
+  ): Promise<void> => {
+    set({ isLoading: true });
+    try {
+      const response = await apiFetch(`/comment/update`, {
+        method: 'POST',
+        useAuth: true, // 댓글 작성은 로그인 필요하므로 true
+        body: JSON.stringify({
+          board_id,
+          comment_contents,
+          comment_id,
         }),
       });
 

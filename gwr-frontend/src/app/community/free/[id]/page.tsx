@@ -28,6 +28,8 @@ const FreePostDetailPage = () => {
     commentPaging,
     setCommentPaging,
     boardDelete,
+    insertComment,
+    updateComment,
   } = useBoardStore();
 
   const [newComment, setNewComment] = useState('');
@@ -49,7 +51,9 @@ const FreePostDetailPage = () => {
   const [reply, setReply] = useState<string>(''); // 새 코멘트 내용
   const [commentState, setCommentState] = useState({
     mode: null as 'reply' | 'edit' | null, // 현재 모드 (답글 / 수정 / 기본)
+    commentId: null as number | null, // 코멘트 id
     targetId: null as number | null, // 대상 comment_id
+    targetBoardId: null as number | null, // 대상 게시글 id
     content: '', // textarea 내용
   });
 
@@ -128,45 +132,60 @@ const FreePostDetailPage = () => {
 
   //   setIsSubmittingComment(true);
 
-  const handleCommentSubmit = async (newComment: any) => {
-    // console.log('데이터', newData);
+  const handleCommentSubmit = async () => {
+    console.log('데이터', commentState);
 
     try {
       let result: any;
 
-      if (boardId) {
+      if (commentState.mode === 'edit') {
         // 수정
-        result = await update(newData);
+        result = await updateComment(
+          Number(commentState.targetBoardId),
+          commentState.content,
+          commentState,
+        );
+      } else if (commentState.mode === 'reply') {
+        // 답글
+        result = await insertComment(
+          Number(commentState.targetBoardId),
+          commentState.content,
+          commentState,
+        );
       } else {
         // 등록
-        result = await insert(newData);
+        result = await insertComment(
+          Number(commentState.targetBoardId),
+          commentState.content,
+          commentState,
+        );
       }
 
-      // status가 0(success)이거나 'success'일 때 성공으로 처리
-      if (result.status === 0 || result.status === 'success') {
-        let message = boardId
-          ? '게시글 수정에 성공했습니다.'
-          : '게시글 등록에 성공했습니다.';
+      // // status가 0(success)이거나 'success'일 때 성공으로 처리
+      // if (result.status === 0 || result.status === 'success') {
+      //   let message = boardId
+      //     ? '게시글 수정에 성공했습니다.'
+      //     : '게시글 등록에 성공했습니다.';
 
-        alert(message);
-        // 성공 시 해당 게시글로 이동
-        router.push(`/news/notice/${result.notice_id}`);
-      } else {
-        // 실패 시 구체적인 에러 메시지 표시
-        let errorMessage = boardId ? '게시글 수정 실패' : '게시글 등록 실패';
+      //   alert(message);
+      //   // 성공 시 해당 게시글로 이동
+      //   router.push(`/news/notice/${result.notice_id}`);
+      // } else {
+      //   // 실패 시 구체적인 에러 메시지 표시
+      //   let errorMessage = boardId ? '게시글 수정 실패' : '게시글 등록 실패';
 
-        if (result.status === 1) {
-          errorMessage = 'CUID가 설정되지 않았습니다.';
-        } else if (result.status === 2) {
-          errorMessage = boardId
-            ? '게시글 수정에 실패했습니다.'
-            : '게시글 등록에 실패했습니다.';
-        } else if (result.status === 3) {
-          errorMessage = '시스템 오류가 발생했습니다.';
-        }
+      //   if (result.status === 1) {
+      //     errorMessage = 'CUID가 설정되지 않았습니다.';
+      //   } else if (result.status === 2) {
+      //     errorMessage = boardId
+      //       ? '게시글 수정에 실패했습니다.'
+      //       : '게시글 등록에 실패했습니다.';
+      //   } else if (result.status === 3) {
+      //     errorMessage = '시스템 오류가 발생했습니다.';
+      //   }
 
-        alert(errorMessage);
-      }
+      //   alert(errorMessage);
+      // }
     } catch (error) {
       console.error('게시글 처리 오류:', error);
       alert(
@@ -391,7 +410,9 @@ const FreePostDetailPage = () => {
                                                 comment.comment_id
                                                 ? null
                                                 : 'reply',
+                                            commentId: 1,
                                             targetId: comment.comment_id,
+                                            targetBoardId: Number(id),
                                             content: '',
                                           }))
                                         }
@@ -407,7 +428,9 @@ const FreePostDetailPage = () => {
                                                 comment.comment_id
                                                 ? null
                                                 : 'edit',
+                                            commentId: 1,
                                             targetId: comment.comment_id,
+                                            targetBoardId: Number(id),
                                             content: comment.comment_contents,
                                           }))
                                         }
@@ -455,7 +478,9 @@ const FreePostDetailPage = () => {
                                         }
                                         placeholder="답글 작성"
                                       />
-                                      <button>등록</button>
+                                      <button onClick={handleCommentSubmit}>
+                                        등록
+                                      </button>
                                     </div>
                                   )}
                               </div>
@@ -490,7 +515,9 @@ const FreePostDetailPage = () => {
                                                         reply.comment_id
                                                         ? null
                                                         : 'edit',
+                                                    commentId: 1,
                                                     targetId: reply.comment_id,
+                                                    targetBoardId: Number(id),
                                                     content:
                                                       reply.comment_contents,
                                                   }))
@@ -516,7 +543,11 @@ const FreePostDetailPage = () => {
                                                 }))
                                               }
                                             />
-                                            <button>수정완료</button>
+                                            <button
+                                              onClick={handleCommentSubmit}
+                                            >
+                                              수정완료
+                                            </button>
                                           </div>
                                         ) : (
                                           <div className="text">
@@ -549,12 +580,18 @@ const FreePostDetailPage = () => {
                           setCommentState((prev) => ({
                             ...prev,
                             mode: null,
-                            targetId: null,
+                            targetCommentId: null,
+                            targetBoardId: Number(id),
                             content: e.target.value,
                           }));
                         }}
                       ></textarea>
-                      <button disabled={!isAuthenticated}>등록</button>
+                      <button
+                        disabled={!isAuthenticated}
+                        onClick={handleCommentSubmit}
+                      >
+                        등록
+                      </button>
                     </div>
                   </td>
                 </tr>
