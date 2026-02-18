@@ -5,6 +5,15 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // CORS 활성화 추가
+  app.enableCors({
+    origin: 'http://localhost:3000', // 프론트엔드 주소
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+    allowedHeaders: 'Content-Type, Accept, Authorization',
+  });
+
   app.useGlobalPipes(new ValidationPipe());
 
   const swagger_config = new DocumentBuilder()
@@ -21,6 +30,6 @@ async function bootstrap() {
   server.keepAliveTimeout = 30 * 1000;
   server.headersTimeout = 31 * 1000;
 
-  await app.listen(3000, '0.0.0.0');
+  await app.listen(process.env.PORT || 3001, '0.0.0.0'); // PORT 환경변수 사용 또는 기본값 3001
 }
 bootstrap();

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  frontend: # Frontend service (gwr-frontend) - Development Configuration
+    build:
+      context: ./gwr-frontend
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./gwr-frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+    command: sh -c "./node_modules/.bin/next dev --turbopack"

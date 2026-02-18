@@ -1,5 +1,5 @@
 {
-  "name": "z9-backend",
+  "name": "gwr-backend",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -13,6 +13,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "start:docker": "docker-compose up",
+    "start:front": "docker-compose -f docker-compose-front.yml up",
     "start:pm2": "docker-compose -f docker-compose-pm2.yml up",
     "start:redis": "docker-compose -f docker-compose-redis.yml up",
     "start:repl": "nest start --entryFile repl",

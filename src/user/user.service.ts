@@ -409,20 +409,23 @@ export class UserService {
             return { status: CreateUserStatus.id_duplicated };
           }
 
-          const post = await this.httpService
-            .post(
-              this.configService.getOrThrow('GAME_API_URL') + 'account/create',
-              {
-                UserID: createUserDto.userAuthLocal.auth_id,
-              },
-            )
-            .toPromise();
-          if (!post.data[0].UUID) {
-            Logger.error('user_create: game account not created');
-            await queryRunner.rollbackTransaction();
-            return { status: CreateUserStatus.acc_not_created };
-          }
-          createUserDto.member_uuid = post.data[0].UUID;
+          // * 게임 계정 생성 로직, 테스트 용으로 주석처리함.
+          // const post = await this.httpService
+          //   .post(
+          //     this.configService.getOrThrow('GAME_API_URL') + 'account/create',
+          //     {
+          //       UserID: createUserDto.userAuthLocal.auth_id,
+          //     },
+          //   )
+          //   .toPromise();
+          // if (!post.data[0].UUID) {
+          //   Logger.error('user_create: game account not created');
+          //   await queryRunner.rollbackTransaction();
+          //   return { status: CreateUserStatus.acc_not_created };
+          // }
+          // createUserDto.member_uuid = post.data[0].UUID;
+
+          createUserDto.member_uuid = 1234567890;
 
           const user = new User({
             ...createUserDto,

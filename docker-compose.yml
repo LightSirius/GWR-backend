@@ -10,8 +10,10 @@ services:
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
-  app:
+  app: # Backend service (GWR-backend)
     build:
       context: .
       dockerfile: ./Dockerfile
@@ -24,12 +26,16 @@ services:
     depends_on:
       - db
     ports:
-      - "3000:3000"
+      - "3001:3001" # Backend 포트를 3001로 변경
     command:
       - bash
       - -c
       - |
         /usr/src/app/wait-for-it.sh db:5432 -t 10
         npm run start:dev
+        
     volumes:
       - ./src:/usr/src/app/src
+
+volumes:
+  postgres_data:

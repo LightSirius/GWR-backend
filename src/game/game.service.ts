@@ -1,10 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { HttpService } from '@nestjs/axios';
-import {
-  InsertLoginTokenDevDto,
-  InsertLoginTokenDto,
-} from './dto/insert-login-token.dto';
+import { InsertLoginTokenDevDto } from './dto/insert-login-token.dto';
 import { RedisClientType } from 'redis';
 import { ConfigService } from '@nestjs/config';
 
